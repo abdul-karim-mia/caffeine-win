@@ -11,30 +11,29 @@
 AppId={{D8F7E9A0-C1B2-4A3F-8C5D-1E2F3A4B5C6D}}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
-DefaultDirName={autopf}\{#MyAppName}
-ChangesAssociations=yes
-DisableProgramGroupPage=no
-LicenseFile=license:
-PrivilegesRequired=lowest
 AppPublisher={#MyAppPublisher}
+AppPublisherURL={#MyAppURL}
+DefaultDirName={autopf}\{#MyAppName}
+DisableProgramGroupPage=no
+PrivilegesRequired=lowest
+LicenseFile=LICENSE
 Compression=lzma
 SolidProcessing=yes
 WizardStyle=modern
 ArchitecturesAllowed=x64
-ArchitecturesAllowed=arm64
 ArchitecturesInstallIn64BitMode=x64
 OutputDir=dist
+OutputBaseFilename=setup
 
 [Languages]
-Name: "english"; MessagesFile: "compiler:LanguageMessages"
-Name: "french"; MessagesFile: "compiler:LanguageMessages"
+Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
 Name: "autostart"; Description: "Start {#MyAppName} with Windows"; Flags: unchecked
 
 [Files]
 Source: "target\release\{#MyAppExecutable}"; DestDir: "{app}"; Flags: ignoreversion
-Source: "README.md"; DestDir: "{app}"; Flags: isreadme
+Source: "README.md"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{autostartmenu}\Programs\{#MyAppName}.lnk"; Target: "{app}\{#MyAppExecutable}"; WorkingDir: "{autopf}"; Tasks: autostart
@@ -42,13 +41,9 @@ Name: "{autodesktop}\{#MyAppName}.lnk"; Target: "{app}\{#MyAppExecutable}"; Work
 
 [Run]
 Filename: "{app}\{#MyAppExecutable}"; Description: "Launch {#MyAppName}"; Flags: nowait postinstall skipifsilent; Check: not IsTaskSelected('autostart')
-Filename: "powershell.exe"; Parameters: "-Command ""New-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' -Name 'Caffeine for Windows' -Value '{app}\{#MyAppExecutable}' -PropertyType String -Force""""; Flags: runhidden; Check: IsTaskSelected('autostart')
+
+[Registry]
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "{#MyAppName}"; ValueData: "{app}\{#MyAppExecutable}"; Flags: uninsdeletevalue; Tasks: autostart
 
 [UninstallDelete]
-Name: "{app}\*"; Types: intensify
-
-[Code]
-function InitializeUninstall(): Boolean;
-begin
-  Result := True;
-end;
+Type: filesandordirs; Name: "{app}\*"
