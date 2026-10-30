@@ -11,8 +11,8 @@
   
   <style>
     :root {
-      --bg: #0b0f19;
-      --card-bg: rgba(22, 27, 46, 0.7);
+      --bg: #070a13;
+      --card-bg: rgba(18, 24, 40, 0.65);
       --card-border: rgba(255, 255, 255, 0.08);
       --text: #f1f5f9;
       --text-muted: #94a3b8;
@@ -21,6 +21,10 @@
       --amber: #fbbf24;
       --red: #f87171;
       --radius: 16px;
+      /* Dynamic Ambient Orbs Variables */
+      --orb1-color: rgba(56, 189, 248, 0.16);
+      --orb2-color: rgba(99, 102, 241, 0.14);
+      --orb3-color: rgba(14, 165, 233, 0.12);
     }
 
     * {
@@ -36,9 +40,90 @@
       min-height: 100vh;
       line-height: 1.6;
       overflow-x: hidden;
-      background-image: 
-        radial-gradient(circle at 50% 0%, rgba(56, 189, 248, 0.15) 0%, transparent 60%),
-        radial-gradient(circle at 100% 40%, rgba(99, 102, 241, 0.08) 0%, transparent 50%);
+    }
+
+    /* Ambient Creative Background System */
+    .bg-effects {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: -1;
+      overflow: hidden;
+    }
+
+    /* Subtle Technical Dot Matrix */
+    .grid-overlay {
+      position: absolute;
+      inset: 0;
+      background-image: radial-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+      background-size: 28px 28px;
+      mask-image: radial-gradient(ellipse at 50% 25%, black 40%, transparent 85%);
+      -webkit-mask-image: radial-gradient(ellipse at 50% 25%, black 40%, transparent 85%);
+      opacity: 0.55;
+    }
+
+    /* Interactive Mouse Spotlight */
+    .spotlight {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(650px circle at var(--mouse-x, 50%) var(--mouse-y, 30%), rgba(56, 189, 248, 0.08), transparent 80%);
+    }
+
+    /* Floating Glowing Orbs (Windows 11 Bloom / Aura feel) */
+    .ambient-orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(100px);
+      transition: background 1.4s ease, transform 1.4s ease;
+      will-change: transform, background;
+    }
+
+    .orb-1 {
+      width: 650px;
+      height: 650px;
+      top: -160px;
+      left: calc(50% - 325px);
+      background: var(--orb1-color);
+      animation: floatOrb1 18s ease-in-out infinite alternate;
+    }
+
+    .orb-2 {
+      width: 520px;
+      height: 520px;
+      top: 25%;
+      right: -100px;
+      background: var(--orb2-color);
+      animation: floatOrb2 22s ease-in-out infinite alternate;
+    }
+
+    .orb-3 {
+      width: 460px;
+      height: 460px;
+      bottom: 5%;
+      left: -80px;
+      background: var(--orb3-color);
+      animation: floatOrb3 20s ease-in-out infinite alternate;
+    }
+
+    @keyframes floatOrb1 {
+      0% { transform: translate(0, 0) scale(1); }
+      50% { transform: translate(50px, 35px) scale(1.06); }
+      100% { transform: translate(-40px, 15px) scale(0.96); }
+    }
+
+    @keyframes floatOrb2 {
+      0% { transform: translate(0, 0) scale(1); }
+      50% { transform: translate(-60px, -40px) scale(1.1); }
+      100% { transform: translate(30px, 25px) scale(0.94); }
+    }
+
+    @keyframes floatOrb3 {
+      0% { transform: translate(0, 0) scale(1); }
+      50% { transform: translate(40px, -30px) scale(1.05); }
+      100% { transform: translate(-25px, 45px) scale(0.95); }
     }
 
     /* Screen Off Overlay Simulator */
@@ -581,6 +666,15 @@
   </style>
 </head>
 <body>
+  <!-- Ambient Background Art System -->
+  <div class="bg-effects">
+    <div class="ambient-orb orb-1" id="orb1"></div>
+    <div class="ambient-orb orb-2" id="orb2"></div>
+    <div class="ambient-orb orb-3" id="orb3"></div>
+    <div class="grid-overlay"></div>
+    <div class="spotlight"></div>
+  </div>
+
   <!-- Full Screen Sleep / Display Off Simulator Overlay -->
   <div id="screenOffOverlay">
     <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="1.5">
@@ -996,6 +1090,42 @@
       updateUI();
     });
 
+    // Mouse Spotlight Tracking
+    window.addEventListener('mousemove', (e) => {
+      document.documentElement.style.setProperty('--mouse-x', `${e.clientX}px`);
+      document.documentElement.style.setProperty('--mouse-y', `${e.clientY}px`);
+    }, { passive: true });
+
+    // Dynamic Ambient Background Response
+    function updateAmbientBg(prog, isInf, isActive) {
+      if (!isActive) {
+        // Sleepy, deep dark indigo / dimmed
+        document.documentElement.style.setProperty('--orb1-color', 'rgba(30, 41, 59, 0.12)');
+        document.documentElement.style.setProperty('--orb2-color', 'rgba(15, 23, 42, 0.12)');
+        document.documentElement.style.setProperty('--orb3-color', 'rgba(30, 41, 59, 0.08)');
+      } else if (isInf) {
+        // Vibrant electric cyan + ultraviolet nebula
+        document.documentElement.style.setProperty('--orb1-color', 'rgba(56, 189, 248, 0.24)');
+        document.documentElement.style.setProperty('--orb2-color', 'rgba(129, 140, 248, 0.18)');
+        document.documentElement.style.setProperty('--orb3-color', 'rgba(14, 165, 233, 0.18)');
+      } else if (prog <= 0.05) {
+        // Red alert energy
+        document.documentElement.style.setProperty('--orb1-color', 'rgba(239, 68, 68, 0.22)');
+        document.documentElement.style.setProperty('--orb2-color', 'rgba(220, 38, 38, 0.16)');
+        document.documentElement.style.setProperty('--orb3-color', 'rgba(244, 63, 94, 0.14)');
+      } else if (prog <= 0.20) {
+        // Amber warning warmth
+        document.documentElement.style.setProperty('--orb1-color', 'rgba(251, 191, 36, 0.2)');
+        document.documentElement.style.setProperty('--orb2-color', 'rgba(245, 158, 11, 0.16)');
+        document.documentElement.style.setProperty('--orb3-color', 'rgba(217, 119, 6, 0.12)');
+      } else {
+        // Active Sky Blue wakefulness
+        document.documentElement.style.setProperty('--orb1-color', 'rgba(56, 189, 248, 0.18)');
+        document.documentElement.style.setProperty('--orb2-color', 'rgba(99, 102, 241, 0.14)');
+        document.documentElement.style.setProperty('--orb3-color', 'rgba(14, 165, 233, 0.14)');
+      }
+    }
+
     function updateUI() {
       const step = STEPS[stepIdx];
       const isActive = step.mode !== 'Off';
@@ -1013,6 +1143,7 @@
         topNavTimer.textContent = `Sleep in ${sleepCountdown}s`;
         topNavTimer.style.color = '#94a3b8';
         renderAllIcons(0, false, false);
+        updateAmbientBg(0, false, false);
       } else if (isInf) {
         timeVal.textContent = '∞';
         powerVal.textContent = 'Always Awake (Continuous)';
@@ -1021,6 +1152,7 @@
         topNavTimer.textContent = 'Awake: ∞';
         topNavTimer.style.color = '#38bdf8';
         renderAllIcons(1, true, true);
+        updateAmbientBg(1, true, true);
       } else {
         const m = Math.floor(remSecs / 60);
         const s = remSecs % 60;
@@ -1033,6 +1165,7 @@
         topNavTimer.style.color = '#10b981';
         const prog = initialSecs > 0 ? remSecs / initialSecs : 0;
         renderAllIcons(prog, false, true);
+        updateAmbientBg(prog, false, true);
       }
     }
 
