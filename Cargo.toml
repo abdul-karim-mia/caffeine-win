@@ -2,9 +2,14 @@
 name = "caffeine-win"
 version = "0.1.0"
 edition = "2024"
-authors = ["Abdul <opensource>"]
+authors = ["Abdul Karim Mia"]
 license = "MIT"
-description = "Lightweight Windows 11 system tray Caffeine keep-awake app"
+description = "Lightweight Windows 11 system tray keep-awake utility with animated circular timer"
+readme = "README.md"
+repository = "https://github.com/abdul-karim-mia/caffeine-win"
+homepage = "https://github.com/abdul-karim-mia/caffeine-win"
+keywords = ["caffeine", "windows", "keep-awake", "tray", "utility"]
+categories = ["command-line-utilities", "os::windows-apis"]
 
 [dependencies]
 windows-sys = { version = "0.59", features = [
@@ -19,5 +24,9 @@ windows-sys = { version = "0.59", features = [
     "Win32_Security",
 ] }
 
-[build-dependencies]
-winresource = "0.1"
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

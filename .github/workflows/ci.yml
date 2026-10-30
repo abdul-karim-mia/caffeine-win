@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  check-and-test:
+    name: Build & Test (Windows)
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Run unit tests
+        run: cargo test --verbose
+
+      - name: Build release binary
+        run: cargo build --release --verbose
+
+      - name: Verify release executable
+        shell: pwsh
+        run: |
+          $exe = "target\release\caffeine-win.exe"
+          if (Test-Path $exe) {
+            $size = (Get-Item $exe).Length
+            Write-Host "Success! Executable size: $size bytes"
+          } else {
+            Write-Error "Release executable not found!"
+            exit 1
+          }

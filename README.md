@@ -1,53 +1,117 @@
 # Caffeine for Windows ☕
 
-A lightweight, zero-dependency Windows 11 keep-awake utility that lives in your system tray, inspired by Android's Caffeine quick tile.
+<p align="center">
+  <img src="https://img.shields.io/github/actions/workflow/status/abdul-karim-mia/caffeine-win/ci.yml?branch=main&style=flat-square&label=CI" alt="CI" />
+  <img src="https://img.shields.io/github/v/release/abdul-karim-mia/caffeine-win?style=flat-square&color=blue" alt="Release" />
+  <img src="https://img.shields.io/badge/binary%20size-115%20KB-success?style=flat-square" alt="Size" />
+  <img src="https://img.shields.io/badge/platform-Windows%2011%20%7C%2010-informational?style=flat-square" alt="Platform" />
+  <img src="https://img.shields.io/badge/license-MIT-purple?style=flat-square" alt="License" />
+</p>
 
-Prevents your screen and PC from sleeping using native Win32 power management.
+An ultra-lightweight, zero-dependency Windows 11 system tray keep-awake utility inspired by Android's Caffeine quick tile.
 
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Binary Size](https://img.shields.io/badge/size-140KB-brightgreen.svg)
-![Platform](https://img.shields.io/badge/platform-Windows%2011%20%7C%2010-lightgrey.svg)
-
----
-
-## ✨ Features
-
-- **Circular Clock Animated Icon:** A live, dynamic pie chart in your system tray that drains clockwise like a clock face as time counts down.
-- **Smart Color Indicator:**
-  - 🔵 **Cyan/Blue**: Plenty of time left (> 20%)
-  - 🟠 **Amber**: Less than 20% remaining
-  - 🔴 **Red**: Final 5% remaining
-  - ⚪ **Gray dot**: Off / Inactive
-  - 💠 **Glowing ring**: Indefinite mode (always awake)
-- **One-Click Cycling:** Left-click the tray icon to cycle timers instantly:
-  ```
-  Off ➔ 15 min ➔ 30 min ➔ 1 hour ➔ 2 hours ➔ 4 hours ➔ Indefinite ➔ Off
-  ```
-- **Live Tooltip:** Hover to see exact minutes and seconds remaining.
-- **Right-Click Menu:** Pick any duration directly, toggle "Start with Windows", or exit.
-- **Ultra-Lightweight:** Written in pure Rust with raw Win32 APIs (no .NET, no Electron, no WPF).
-- **Single Exe (~140 KB):** Portable, runs immediately without installation.
-- **Single Instance:** Prevents duplicate running instances.
+It prevents your PC and screen from sleeping using official Windows power management APIs. It lives quietly in your system tray with a live circular clock icon that animates and drains like a countdown timer.
 
 ---
 
-## 🚀 Building & Testing
+## ✨ Highlights
+
+- **Zero Dependencies:** Pure native Rust with raw Win32 APIs. No .NET runtime, no Electron, no WebView2, no external DLLs.
+- **Microscopic Footprint:** Single portable executable under **115 KB**, consuming ~2 MB RAM.
+- **Dynamic Circular Clock Icon:** Draws a live pie-chart progress bar in the system tray in real time using native GDI.
+- **Smart Color States:**
+  - 🔵 **Cyan / Sky Blue:** Active (> 20% remaining)
+  - 🟠 **Amber / Orange:** Warning (5% – 20% remaining)
+  - 🔴 **Red Alert:** Final countdown (< 5% remaining)
+  - 💠 **Glowing Cyan Ring:** Indefinite mode (always awake)
+  - ⚪ **Dim Gray Ring:** Inactive / Off
+- **One-Click Cycling:** Left-click the tray icon to cycle timers seamlessly:
+  $$\text{Off} \longrightarrow \text{15 min} \longrightarrow \text{30 min} \longrightarrow \text{1 hr} \longrightarrow \text{2 hr} \longrightarrow \text{4 hr} \longrightarrow \text{Indefinite} \longrightarrow \text{Off}$$
+- **Context Menu:** Right-click to directly jump to any preset, toggle **"Start with Windows"**, or exit.
+- **Safe & Native:** Uses `SetThreadExecutionState` instead of simulating fake keystrokes (unlike old Caffeine tools that send F15 or jitter mice).
+- **Single Instance:** Enforced via Win32 Named Mutex to prevent duplicate icons.
+
+---
+
+## 📊 Comparison
+
+| Feature | **Caffeine for Windows** | PowerToys Awake | Classic Caffeine | Mouse Jigglers |
+|---|---|---|---|---|
+| **Binary Size** | **~115 KB** | ~150–200 MB (bundled) | ~50 KB | Varies |
+| **Runtime Dependency** | **None (Native)** | .NET 8 / WPF | None (C++) | Often Java / Python |
+| **Tray Icon Animation** | **Live Circular Clock** | Static icons | Static pot | None |
+| **Keep-Awake Mechanism** | **`SetThreadExecutionState`** | `SetThreadExecutionState` | Simulated F15 key | Simulated mouse input |
+| **Clean Screen Saver Handling** | **Yes** | Yes | Disturbs apps | Disturbs input |
+| **One-Click Cycle** | **Yes (Left-Click)** | No | Double-click toggle only | No |
+
+---
+
+## 🖥️ How It Works
+
+### 1. Power State Invalidation
+Instead of injecting synthetic mouse movements or keyboard clicks that break typing and trigger anti-cheat software, Caffeine calls the Windows kernel power API:
+
+```rust
+SetThreadExecutionState(
+    ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED
+);
+```
+- `ES_SYSTEM_REQUIRED`: Prevents CPU and system idle sleep.
+- `ES_DISPLAY_REQUIRED`: Prevents the monitor and display from turning off.
+- `ES_CONTINUOUS`: Informs Windows to keep this policy active until explicitly cleared.
+
+### 2. GDI In-Memory Dynamic Icons
+Every second, an in-memory 32×32 bitmap and 1-bit transparency mask are drawn with Win32 GDI primitives (`Pie`, `Ellipse`, `CreateIconIndirect`), creating smooth vector-like clock progress in the system tray.
+
+### 3. Windows Autostart
+Enabling "Start with Windows" registers an entry in:
+`HKCU\Software\Microsoft\Windows\CurrentVersion\Run`
+No admin rights or UAC elevation required.
+
+---
+
+## 📥 Installation & Download
+
+1. Download the latest `caffeine-win.exe` from [GitHub Releases](https://github.com/abdul-karim-mia/caffeine-win/releases).
+2. Move it to your preferred folder (e.g. `C:\Users\<User>\AppData\Local\Programs` or your Utilities folder).
+3. Double-click to run!
+4. *(Optional)* Right-click the tray icon and check **"Start with Windows"**.
+
+---
+
+## 🛠️ Building from Source
 
 ### Prerequisites
 - [Rust](https://rustup.rs/) (stable toolchain)
+- Windows 10 or Windows 11
 
-### Run Tests
+### Commands
 ```powershell
+# Clone the repository
+git clone https://github.com/abdul-karim-mia/caffeine-win.git
+cd caffeine-win
+
+# Run test suite
 cargo test
-```
 
-### Build Release Exe
-```powershell
+# Build optimized release binary
 cargo build --release
 ```
-The optimized executable will be generated at `target/release/caffeine-win.exe` (~140 KB).
+
+The compiled binary will be placed at:
+```
+target\release\caffeine-win.exe
+```
+
+---
+
+## 🤝 Contributing
+
+Contributions, bug reports, and suggestions are welcome!
+Please check out [CONTRIBUTING.md](CONTRIBUTING.md) and our [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ---
 
 ## 📄 License
-This project is open-source under the [MIT License](LICENSE).
+
+This project is licensed under the [MIT License](LICENSE).

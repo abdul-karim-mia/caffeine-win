@@ -1,0 +1,42 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build-release:
+    name: Build & Publish Release
+    runs-on: windows-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build optimized release binary
+        run: cargo build --release --locked
+
+      - name: Package executable
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist
+          Copy-Item target\release\caffeine-win.exe -Destination dist\caffeine-win.exe
+          Copy-Item README.md -Destination dist\README.md
+          Copy-Item LICENSE -Destination dist\LICENSE.txt
+          Compress-Archive -Path dist\* -DestinationPath dist\caffeine-win-windows-x64.zip
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/caffeine-win.exe
+            dist/caffeine-win-windows-x64.zip
+          draft: false
+          prerelease: false
+          generate_release_notes: true
