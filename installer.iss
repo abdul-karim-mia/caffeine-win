@@ -17,7 +17,6 @@ DisableProgramGroupPage=no
 LicenseFile=license:
 PrivilegesRequired=lowest
 AppPublisher={#MyAppPublisher}
-FindExistingReadOnlyDirsIfNeeded=false
 Compression=lzma
 SolidProcessing=yes
 WizardStyle=modern
