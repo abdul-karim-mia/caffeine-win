@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Caffeine for Windows 11 — Keep PC & Screen Awake</title>
+  <meta name="description" content="Ultra-lightweight (115 KB), zero-dependency Windows 11 system tray keep-awake utility with animated circular clock icon.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --card-bg: rgba(22, 27, 46, 0.7);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --accent: #38bdf8;
+      --accent-glow: rgba(56, 189, 248, 0.35);
+      --amber: #fbbf24;
+      --red: #f87171;
+      --radius: 16px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+      min-height: 100vh;
+      line-height: 1.6;
+      overflow-x: hidden;
+      background-image: 
+        radial-gradient(circle at 50% 0%, rgba(56, 189, 248, 0.15) 0%, transparent 60%),
+        radial-gradient(circle at 100% 40%, rgba(99, 102, 241, 0.08) 0%, transparent 50%);
+    }
+
+    /* Container */
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 40px 24px;
+    }
+
+    /* Header */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 60px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-icon {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, #0284c7, #38bdf8);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 14px var(--accent-glow);
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .nav-link {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.95rem;
+      transition: color 0.2s;
+    }
+
+    .nav-link:hover {
+      color: var(--text);
+    }
+
+    /* Hero */
+    .hero {
+      text-align: center;
+      margin-bottom: 70px;
+    }
+
+    .badges {
+      display: inline-flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 24px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--card-border);
+      padding: 6px 14px;
+      border-radius: 9999px;
+      font-size: 0.85rem;
+      color: #cbd5e1;
+    }
+
+    .badge-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #10b981;
+      box-shadow: 0 0 8px #10b981;
+    }
+
+    h1 {
+      font-size: clamp(2.5rem, 6vw, 4.2rem);
+      font-weight: 800;
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+      margin-bottom: 20px;
+      background: linear-gradient(180deg, #ffffff 0%, #cbd5e1 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .subtitle {
+      font-size: 1.25rem;
+      color: var(--text-muted);
+      max-width: 650px;
+      margin: 0 auto 36px;
+    }
+
+    .cta-group {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 48px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 28px;
+      border-radius: 12px;
+      font-weight: 600;
+      text-decoration: none;
+      font-size: 1rem;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      cursor: pointer;
+    }
+
+    .btn-primary {
+      background: #0284c7;
+      color: #fff;
+      box-shadow: 0 4px 20px rgba(2, 132, 199, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .btn-primary:hover {
+      background: #0369a1;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(2, 132, 199, 0.5);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text);
+      border: 1px solid var(--card-border);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-2px);
+    }
+
+    /* Interactive Simulator */
+    .simulator-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      backdrop-filter: blur(20px);
+      border-radius: var(--radius);
+      padding: 32px;
+      max-width: 780px;
+      margin: 0 auto 80px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+      position: relative;
+    }
+
+    .simulator-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 28px;
+    }
+
+    .simulator-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+
+    .simulator-hint {
+      font-size: 0.85rem;
+      color: var(--accent);
+      background: rgba(56, 189, 248, 0.1);
+      padding: 4px 12px;
+      border-radius: 9999px;
+      border: 1px solid rgba(56, 189, 248, 0.2);
+    }
+
+    /* Windows 11 Mock Taskbar */
+    .taskbar {
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      user-select: none;
+    }
+
+    .taskbar-start {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .taskbar-icon {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+      color: #94a3b8;
+    }
+
+    .taskbar-tray {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    /* Interactive Tray Icon */
+    .caffeine-tray-wrapper {
+      position: relative;
+    }
+
+    .caffeine-tray-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      width: 44px;
+      height: 44px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+    }
+
+    .caffeine-tray-btn:hover {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: var(--accent);
+      box-shadow: 0 0 16px var(--accent-glow);
+    }
+
+    .caffeine-tray-btn:active {
+      transform: scale(0.94);
+    }
+
+    /* Tooltip */
+    .tray-tooltip {
+      position: absolute;
+      bottom: 54px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1e293b;
+      color: #f8fafc;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      white-space: nowrap;
+      pointer-events: none;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+      animation: fadeIn 0.2s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translate(-50%, 6px); }
+      to { opacity: 1; transform: translate(-50%, 0); }
+    }
+
+    .sim-details {
+      margin-top: 24px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      text-align: left;
+    }
+
+    .sim-box {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--card-border);
+      padding: 16px;
+      border-radius: 10px;
+    }
+
+    .sim-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .sim-val {
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    /* Features Grid (Bento) */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 24px;
+      margin-bottom: 80px;
+    }
+
+    .feature-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 30px;
+      transition: all 0.3s;
+    }
+
+    .feature-card:hover {
+      border-color: rgba(56, 189, 248, 0.3);
+      transform: translateY(-4px);
+    }
+
+    .feature-icon {
+      width: 48px;
+      height: 48px;
+      background: rgba(56, 189, 248, 0.1);
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent);
+      margin-bottom: 20px;
+    }
+
+    .feature-card h3 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+
+    .feature-card p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    /* Comparison Table */
+    .comp-section {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 36px;
+      margin-bottom: 80px;
+      overflow-x: auto;
+    }
+
+    .comp-section h2 {
+      text-align: center;
+      margin-bottom: 30px;
+      font-size: 1.8rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+
+    th, td {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--card-border);
+      font-size: 0.95rem;
+    }
+
+    th {
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .highlight-row {
+      background: rgba(56, 189, 248, 0.04);
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    /* Install Command Box */
+    .install-box {
+      background: #0f172a;
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      max-width: 600px;
+      margin: 0 auto 80px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.9rem;
+    }
+
+    .copy-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: var(--text);
+      padding: 6px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      transition: all 0.2s;
+    }
+
+    .copy-btn:hover {
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--card-border);
+      padding: 40px 0;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    footer a {
+      color: var(--text);
+      text-decoration: none;
+    }
+
+    footer a:hover {
+      color: var(--accent);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="brand">
+        <div class="brand-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 8h1a4 4 0 1 1 0 8h-1"></path>
+            <path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"></path>
+            <line x1="6" y1="2" x2="6" y2="4"></line>
+            <line x1="10" y1="2" x2="10" y2="4"></line>
+            <line x1="14" y1="2" x2="14" y2="4"></line>
+          </svg>
+        </div>
+        <span>Caffeine-Win</span>
+      </div>
+
+      <nav class="nav-links">
+        <a href="#features" class="nav-link">Features</a>
+        <a href="#comparison" class="nav-link">Comparison</a>
+        <a href="https://github.com/abdul-karim-mia/caffeine-win" target="_blank" class="nav-link">GitHub ↗</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="badges">
+          <span class="badge"><span class="badge-dot"></span> Windows 11 Native</span>
+          <span class="badge">⚡ 115 KB Executable</span>
+          <span class="badge">☕ Zero Dependencies</span>
+        </div>
+
+        <h1>Keep your PC & screen awake.<br>Clean. Minimal. Smart.</h1>
+        <p class="subtitle">
+          Inspired by Android's Caffeine tile. Lives in your Windows 11 system tray with a live circular clock icon. One click cycles timers from 15 minutes to indefinite.
+        </p>
+
+        <div class="cta-group">
+          <a href="https://github.com/abdul-karim-mia/caffeine-win/releases/latest" class="btn btn-primary">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            Download .exe (115 KB)
+          </a>
+          <a href="https://github.com/abdul-karim-mia/caffeine-win" target="_blank" class="btn btn-secondary">
+            View on GitHub
+          </a>
+        </div>
+      </section>
+
+      <!-- Interactive Simulator -->
+      <section class="simulator-card">
+        <div class="simulator-header">
+          <div class="simulator-title">Interactive System Tray Simulator</div>
+          <span class="simulator-hint">👈 Click the tray icon to cycle timers</span>
+        </div>
+
+        <div class="taskbar">
+          <div class="taskbar-start">
+            <div class="taskbar-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M0 0h11v11H0zM13 0h11v11H13zM0 13h11v11H0zM13 13h11v11H13z"/>
+              </svg>
+            </div>
+            <div class="taskbar-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+            </div>
+          </div>
+
+          <div class="taskbar-tray">
+            <div class="caffeine-tray-wrapper">
+              <button class="caffeine-tray-btn" id="trayBtn" title="Click to cycle timer">
+                <canvas id="trayCanvas" width="32" height="32"></canvas>
+              </button>
+              <div class="tray-tooltip" id="trayTooltip">Caffeine: Off (Click to activate)</div>
+            </div>
+
+            <!-- Fake Windows tray items -->
+            <div class="taskbar-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M5 12.55a11 11 0 0 1 14.08 0"></path>
+                <path d="M1.42 9a16 16 0 0 1 21.16 0"></path>
+                <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
+                <line x1="12" y1="20" x2="12.01" y2="20"></line>
+              </svg>
+            </div>
+            <div class="taskbar-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+              </svg>
+            </div>
+            <div style="font-size: 0.8rem; color: #cbd5e1; font-weight: 500;" id="clockDisplay">12:00 PM</div>
+          </div>
+        </div>
+
+        <div class="sim-details">
+          <div class="sim-box">
+            <div class="sim-label">Current Mode</div>
+            <div class="sim-val" id="modeVal">Off</div>
+          </div>
+          <div class="sim-box">
+            <div class="sim-label">Time Remaining</div>
+            <div class="sim-val" id="timeVal">00:00</div>
+          </div>
+          <div class="sim-box">
+            <div class="sim-label">Power State</div>
+            <div class="sim-val" id="powerVal" style="color: #64748b;">Normal (Idle Sleep Allowed)</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Features -->
+      <section class="features-grid" id="features">
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+          </div>
+          <h3>Live Circular Clock Icon</h3>
+          <p>Visual countdown pie chart right on your taskbar. Dynamic Win32 GDI drawing animates clock hands and color shifts smoothly from Blue to Amber to Red.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
+            </svg>
+          </div>
+          <h3>Instant Click Cycling</h3>
+          <p>No clunky menus needed. Left-click to step through 15m, 30m, 1h, 2h, 4h, and Indefinite mode. Right-click anytime for direct presets.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+              <line x1="8" y1="21" x2="16" y2="21"></line>
+              <line x1="12" y1="17" x2="12" y2="21"></line>
+            </svg>
+          </div>
+          <h3>Official Win32 Power API</h3>
+          <p>Uses <code>SetThreadExecutionState</code> natively. No simulated keyboard clicks (F15) or artificial mouse movements that disturb your typing or trigger false security alarms.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 17.58A5 5 0 0 0 18 8h-1.26A8 8 0 1 0 4 16.25"></path>
+              <line x1="8" y1="16" x2="8.01" y2="16"></line>
+              <line x1="12" y1="20" x2="12.01" y2="20"></line>
+            </svg>
+          </div>
+          <h3>Microscopic 115 KB Binary</h3>
+          <p>Zero dependencies. Doesn't need .NET Runtime, Visual C++ Redistributable, or Electron. Portable single file you can place anywhere.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+            </svg>
+          </div>
+          <h3>Start with Windows</h3>
+          <p>Toggle automatic startup on login directly from the tray menu. Stored cleanly in your user registry without requiring admin privileges.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            </svg>
+          </div>
+          <h3>100% Open Source</h3>
+          <p>Permissive MIT License. Clean Rust codebase with comprehensive unit tests and automated GitHub Actions CI builds.</p>
+        </div>
+      </section>
+
+      <!-- Comparison -->
+      <section class="comp-section" id="comparison">
+        <h2>How It Compares</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Feature</th>
+              <th>Caffeine-Win</th>
+              <th>PowerToys Awake</th>
+              <th>Classic Caffeine</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="highlight-row">
+              <td>Binary Size</td>
+              <td>⚡ 115 KB</td>
+              <td>~180 MB</td>
+              <td>~50 KB</td>
+            </tr>
+            <tr>
+              <td>Runtime Requirement</td>
+              <td>None (Native)</td>
+              <td>.NET 8 Runtime</td>
+              <td>None</td>
+            </tr>
+            <tr>
+              <td>Animated Tray Icon</td>
+              <td>✅ Live Circular Clock</td>
+              <td>❌ Static icon</td>
+              <td>❌ Static pot</td>
+            </tr>
+            <tr>
+              <td>Keep-Awake Method</td>
+              <td>✅ Official API</td>
+              <td>✅ Official API</td>
+              <td>⚠️ Fake F15 Key</td>
+            </tr>
+            <tr>
+              <td>One-Click Fast Cycling</td>
+              <td>✅ Left-click cycle</td>
+              <td>❌ Nested menus</td>
+              <td>❌ Double-click toggle</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </main>
+
+    <footer>
+      <p>Caffeine for Windows is open-source under the MIT License.</p>
+      <p style="margin-top: 8px;">
+        Crafted with Rust and Win32 by <a href="https://github.com/abdul-karim-mia" target="_blank">Abdul Karim Mia</a>.
+      </p>
+    </footer>
+  </div>
+
+  <script>
+    // Simulator Script
+    const STEPS = [
+      { mode: 'Off', total: 0, label: 'Off' },
+      { mode: '15m', total: 15 * 60, label: '15 Minutes' },
+      { mode: '30m', total: 30 * 60, label: '30 Minutes' },
+      { mode: '1h', total: 60 * 60, label: '1 Hour' },
+      { mode: '2h', total: 120 * 60, label: '2 Hours' },
+      { mode: '4h', total: 240 * 60, label: '4 Hours' },
+      { mode: 'Infinite', total: -1, label: 'Indefinite' },
+    ];
+
+    let stepIdx = 0;
+    let remSecs = 0;
+    let initialSecs = 0;
+
+    const canvas = document.getElementById('trayCanvas');
+    const ctx = canvas.getContext('2d');
+    const trayBtn = document.getElementById('trayBtn');
+    const tooltip = document.getElementById('trayTooltip');
+    const modeVal = document.getElementById('modeVal');
+    const timeVal = document.getElementById('timeVal');
+    const powerVal = document.getElementById('powerVal');
+
+    function drawIcon(progress, isInfinite, isActive) {
+      ctx.clearRect(0, 0, 32, 32);
+      const cx = 16, cy = 16, r = 13;
+
+      if (!isActive) {
+        // Off: dim ring
+        ctx.strokeStyle = '#475569';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.fillStyle = '#64748b';
+        ctx.beginPath();
+        ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (isInfinite) {
+        // Glowing cyan ring
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.fillStyle = '#38bdf8';
+        ctx.beginPath();
+        ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        // Track
+        ctx.strokeStyle = '#334155';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Color based on remaining
+        let color = '#38bdf8';
+        if (progress <= 0.05) color = '#ef4444';
+        else if (progress <= 0.20) color = '#f59e0b';
+
+        // Pie sweep
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        const startAngle = -Math.PI / 2;
+        const endAngle = startAngle + (1 - progress) * (Math.PI * 2);
+        ctx.arc(cx, cy, r, startAngle, endAngle);
+        ctx.closePath();
+        ctx.fill();
+
+        // Hand
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + r * Math.cos(endAngle), cy + r * Math.sin(endAngle));
+        ctx.stroke();
+      }
+    }
+
+    function updateUI() {
+      const step = STEPS[stepIdx];
+      const isActive = step.mode !== 'Off';
+      const isInf = step.mode === 'Infinite';
+
+      modeVal.textContent = step.label;
+
+      if (!isActive) {
+        timeVal.textContent = '00:00';
+        powerVal.textContent = 'Normal (Sleep Allowed)';
+        powerVal.style.color = '#64748b';
+        tooltip.textContent = 'Caffeine: Off (Click to activate)';
+        drawIcon(0, false, false);
+      } else if (isInf) {
+        timeVal.textContent = '∞';
+        powerVal.textContent = 'Awake (Continuous)';
+        powerVal.style.color = '#38bdf8';
+        tooltip.textContent = 'Caffeine: Always Awake (Indefinite)';
+        drawIcon(1, true, true);
+      } else {
+        const m = Math.floor(remSecs / 60);
+        const s = remSecs % 60;
+        timeVal.textContent = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        powerVal.textContent = 'Active (Display & CPU Awake)';
+        powerVal.style.color = '#10b981';
+        tooltip.textContent = `Caffeine: ${m}m ${s}s remaining`;
+        const prog = initialSecs > 0 ? remSecs / initialSecs : 0;
+        drawIcon(prog, false, true);
+      }
+    }
+
+    trayBtn.addEventListener('click', () => {
+      stepIdx = (stepIdx + 1) % STEPS.length;
+      const step = STEPS[stepIdx];
+      if (step.total > 0) {
+        remSecs = step.total;
+        initialSecs = step.total;
+      } else {
+        remSecs = 0;
+        initialSecs = 0;
+      }
+      updateUI();
+    });
+
+    // 1-second ticker for simulator
+    setInterval(() => {
+      const step = STEPS[stepIdx];
+      if (step.mode !== 'Off' && step.mode !== 'Infinite') {
+        if (remSecs > 0) {
+          remSecs--;
+          if (remSecs === 0) {
+            stepIdx = 0;
+          }
+          updateUI();
+        }
+      }
+    }, 1000);
+
+    // Initial draw
+    updateUI();
+
+    // Clock
+    function updateClock() {
+      const d = new Date();
+      document.getElementById('clockDisplay').textContent = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+    updateClock();
+    setInterval(updateClock, 30000);
+  </script>
+</body>
+</html>
