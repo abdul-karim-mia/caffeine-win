@@ -1,42 +1,110 @@
-name: Release
+name: Build & Publish Release
 
 on:
   push:
+    branches:
+      - main
     tags:
       - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
-  build-release:
-    name: Build & Publish Release
+  publish:
+    name: Build & Release Executable
     runs-on: windows-latest
-    permissions:
-      contents: write
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Build optimized release binary
-        run: cargo build --release --locked
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
 
-      - name: Package executable
+      - name: Determine Release Tag & Version
+        id: versioning
+        shell: pwsh
+        run: |
+          # 1. If triggered by a Git tag, use it directly
+          if ("${{ github.ref }}" -like "refs/tags/v*") {
+            $tag = "${{ github.ref_name }}"
+            Write-Host "Triggered by tag: $tag"
+            echo "RELEASE_TAG=$tag" >> $env:GITHUB_ENV
+            echo "IS_PRERELEASE=false" >> $env:GITHUB_ENV
+            echo "RELEASE_NAME=Caffeine for Windows $tag" >> $env:GITHUB_ENV
+            exit 0
+          }
+
+          # 2. Extract version from Cargo.toml
+          $cargoContent = Get-Content Cargo.toml -Raw
+          if ($cargoContent -match 'version\s*=\s*"([^"]+)"') {
+            $cargoVer = $matches[1]
+          } else {
+            $cargoVer = "0.1.0"
+          }
+
+          $targetTag = "v$cargoVer"
+          Write-Host "Cargo.toml version: $cargoVer (tag: $targetTag)"
+
+          # 3. Check if this tag already exists on remote
+          $existingTag = git ls-remote --tags origin "refs/tags/$targetTag"
+          if (-not $existingTag) {
+            Write-Host "New version detected ($targetTag). Publishing official release."
+            echo "RELEASE_TAG=$targetTag" >> $env:GITHUB_ENV
+            echo "IS_PRERELEASE=false" >> $env:GITHUB_ENV
+            echo "RELEASE_NAME=Caffeine for Windows $targetTag" >> $env:GITHUB_ENV
+          } else {
+            Write-Host "Tag $targetTag already exists. Updating rolling 'latest' release."
+            echo "RELEASE_TAG=latest" >> $env:GITHUB_ENV
+            echo "IS_PRERELEASE=false" >> $env:GITHUB_ENV
+            echo "RELEASE_NAME=Caffeine for Windows (Latest Build)" >> $env:GITHUB_ENV
+          }
+
+      - name: Run Unit Tests
+        run: cargo test --release
+
+      - name: Build Optimized Release Binary
+        run: cargo build --release
+
+      - name: Package Release Assets & Compute Checksums
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path dist
           Copy-Item target\release\caffeine-win.exe -Destination dist\caffeine-win.exe
           Copy-Item README.md -Destination dist\README.md
           Copy-Item LICENSE -Destination dist\LICENSE.txt
-          Compress-Archive -Path dist\* -DestinationPath dist\caffeine-win-windows-x64.zip
 
-      - name: Create GitHub Release
+          # Create Zip distribution
+          Compress-Archive -Path dist\* -DestinationPath "dist\caffeine-win-windows-x64.zip"
+
+          # Compute SHA-256 hashes
+          $exeHash = (Get-FileHash -Path dist\caffeine-win.exe -Algorithm SHA256).Hash
+          $zipHash = (Get-FileHash -Path dist\caffeine-win-windows-x64.zip -Algorithm SHA256).Hash
+
+          "$exeHash  caffeine-win.exe" | Out-File -Encoding ascii dist\caffeine-win.exe.sha256
+          "$zipHash  caffeine-win-windows-x64.zip" | Out-File -Encoding ascii dist\caffeine-win-windows-x64.zip.sha256
+
+          Write-Host "Assets packaged successfully:"
+          Get-ChildItem dist | Select-Object Name, Length
+
+      - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          name: ${{ env.RELEASE_NAME }}
           files: |
             dist/caffeine-win.exe
             dist/caffeine-win-windows-x64.zip
+            dist/caffeine-win.exe.sha256
+            dist/caffeine-win-windows-x64.zip.sha256
+          prerelease: ${{ env.IS_PRERELEASE == 'true' }}
           draft: false
-          prerelease: false
           generate_release_notes: true
+          make_latest: true
