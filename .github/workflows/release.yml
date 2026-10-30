@@ -76,7 +76,7 @@ jobs:
         run: cargo build --release
 
       - name: Install Inno Setup
-        uses: InnoIDE/install-inno-setup@v2
+        uses: InnoSetup/install-inno-setup@v2
 
       - name: Package Release Assets & Compute Checksums
         shell: pwsh

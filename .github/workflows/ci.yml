@@ -43,7 +43,7 @@ jobs:
           }
 
       - name: Install Inno Setup
-        uses: InnoIDE/install-inno-setup@v2
+        uses: InnoSetup/install-inno-setup@v2
 
       - name: Verify installer build
         shell: pwsh
