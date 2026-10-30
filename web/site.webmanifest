@@ -1,0 +1,16 @@
+{
+  "name": "Caffeine for Windows 11",
+  "short_name": "Caffeine-Win",
+  "description": "Ultra-lightweight (115 KB), zero-dependency Windows 11 system tray keep-awake utility with animated circular clock icon.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#070a13",
+  "theme_color": "#070a13",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

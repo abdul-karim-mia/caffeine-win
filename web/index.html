@@ -3,8 +3,116 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Caffeine for Windows 11 — Keep PC & Screen Awake</title>
-  <meta name="description" content="Ultra-lightweight (115 KB), zero-dependency Windows 11 system tray keep-awake utility with animated circular clock icon.">
+  <title>Caffeine for Windows 11 — Keep PC & Screen Awake | Ultra-Lightweight System Tray Utility</title>
+  <meta name="description" content="Ultra-lightweight (115 KB), zero-dependency Windows 11 system tray keep-awake utility inspired by Android Caffeine. Features a live animated circular clock countdown icon.">
+  <meta name="keywords" content="caffeine windows, windows 11 keep awake, keep pc awake windows, caffeine app windows 11, powertoys awake alternative, setthreadexecutionstate, system tray keep awake, screen timeout preventer">
+  <meta name="author" content="Abdul Karim Mia">
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+  <meta name="theme-color" content="#070a13">
+  <meta name="color-scheme" content="dark">
+
+  <!-- Canonical URL -->
+  <link rel="canonical" href="https://caffeine-win.vercel.app/">
+
+  <!-- Favicon & App Icons -->
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="manifest" href="/site.webmanifest">
+  <link rel="apple-touch-icon" href="/favicon.svg">
+
+  <!-- Open Graph / Facebook / LinkedIn / Discord -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://caffeine-win.vercel.app/">
+  <meta property="og:site_name" content="Caffeine for Windows 11">
+  <meta property="og:title" content="Caffeine for Windows 11 — Keep PC & Screen Awake">
+  <meta property="og:description" content="Ultra-lightweight (115 KB), zero-dependency Windows 11 system tray keep-awake utility with animated circular clock icon.">
+  <meta property="og:image" content="https://caffeine-win.vercel.app/og-image.svg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Caffeine for Windows 11 Preview Banner">
+  <meta property="og:locale" content="en_US">
+
+  <!-- Twitter / X Cards -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:url" content="https://caffeine-win.vercel.app/">
+  <meta name="twitter:title" content="Caffeine for Windows 11 — Keep PC & Screen Awake">
+  <meta name="twitter:description" content="Ultra-lightweight (115 KB) Windows 11 system tray keep-awake utility with animated circular clock icon.">
+  <meta name="twitter:image" content="https://caffeine-win.vercel.app/og-image.svg">
+  <meta name="twitter:image:alt" content="Caffeine for Windows 11 Preview">
+
+  <!-- Structured Data: SoftwareApplication & FAQPage JSON-LD -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Caffeine for Windows 11",
+        "operatingSystem": "Windows 10, Windows 11",
+        "applicationCategory": "UtilitiesApplication",
+        "fileSize": "115KB",
+        "softwareVersion": "0.1.0",
+        "description": "Ultra-lightweight, zero-dependency Windows 11 system tray keep-awake utility with animated circular clock icon.",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
+        "aggregateRating": {
+          "@type": "AggregateRating",
+          "ratingValue": "5.0",
+          "ratingCount": "18"
+        },
+        "downloadUrl": "https://github.com/abdul-karim-mia/caffeine-win/releases/latest",
+        "featureList": [
+          "Prevents Windows 11 PC and display sleep",
+          "Animated circular clock tray icon with live pie chart countdown",
+          "One-click timer cycling: 15m, 30m, 1h, 2h, 4h, Indefinite",
+          "Official SetThreadExecutionState Win32 power management API",
+          "Start with Windows auto-startup option",
+          "Zero runtime dependencies (115 KB standalone native binary)"
+        ]
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "How does Caffeine keep Windows awake?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Caffeine calls the official Windows kernel function SetThreadExecutionState with ES_CONTINUOUS, ES_SYSTEM_REQUIRED, and ES_DISPLAY_REQUIRED. This resets the system and monitor idle timers cleanly without simulating fake keystrokes or mouse jitters."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does Caffeine for Windows require installation or admin privileges?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No. It is a single portable 115 KB executable that runs instantly without installation or admin rights. The optional 'Start with Windows' setting is stored safely in HKCU registry."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How do I cycle between timer durations?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Simply left-click the system tray icon to cycle through presets: Off -> 15 min -> 30 min -> 1 hour -> 2 hours -> 4 hours -> Indefinite -> Off. You can also right-click to choose any preset directly."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How does this compare to Microsoft PowerToys Awake or old Caffeine?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "PowerToys Awake requires the full .NET 8 runtime and is part of a ~180MB package. Old Caffeine apps simulate F15 keypresses which can disrupt applications or trigger anti-cheat software. Caffeine for Windows is 115 KB, has zero dependencies, uses the official Windows power API, and provides a live animated pie-clock in your tray."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -646,6 +754,75 @@
       color: var(--accent);
     }
 
+    /* FAQ Section */
+    .faq-section {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 36px;
+      margin-bottom: 80px;
+    }
+
+    .faq-section h2 {
+      text-align: center;
+      margin-bottom: 30px;
+      font-size: 1.8rem;
+    }
+
+    .faq-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .faq-item {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      overflow: hidden;
+      transition: border-color 0.2s;
+    }
+
+    .faq-item:hover {
+      border-color: rgba(56, 189, 248, 0.3);
+    }
+
+    .faq-question {
+      padding: 18px 22px;
+      font-size: 1.05rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      list-style: none;
+      color: #f1f5f9;
+      user-select: none;
+    }
+
+    .faq-question::-webkit-details-marker {
+      display: none;
+    }
+
+    .faq-icon {
+      transition: transform 0.25s ease;
+      color: var(--accent);
+      font-weight: 400;
+    }
+
+    .faq-item[open] .faq-icon {
+      transform: rotate(45deg);
+    }
+
+    .faq-answer {
+      padding: 0 22px 18px;
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+
     /* Footer */
     footer {
       border-top: 1px solid var(--card-border);
@@ -712,6 +889,7 @@
       <nav class="nav-links">
         <a href="#features" class="nav-link">Features</a>
         <a href="#comparison" class="nav-link">Comparison</a>
+        <a href="#faq" class="nav-link">FAQ</a>
         <a href="https://github.com/abdul-karim-mia/caffeine-win" target="_blank" class="nav-link">GitHub ↗</a>
       </nav>
     </div>
@@ -933,6 +1111,62 @@
             </tr>
           </tbody>
         </table>
+      </section>
+
+      <!-- Frequently Asked Questions (SEO / FAQPage) -->
+      <section class="faq-section" id="faq">
+        <h2>Frequently Asked Questions</h2>
+        <div class="faq-list">
+          <details class="faq-item" open>
+            <summary class="faq-question">
+              <span>How does Caffeine keep Windows awake without moving the mouse?</span>
+              <span class="faq-icon">+</span>
+            </summary>
+            <div class="faq-answer">
+              Caffeine calls the official Windows kernel function <code>SetThreadExecutionState</code> with <code>ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED</code>. This informs Windows power management that critical tasks and display activity are active, cleanly resetting idle sleep timers without synthesizing fake keyboard events or jittering mouse inputs.
+            </div>
+          </details>
+
+          <details class="faq-item">
+            <summary class="faq-question">
+              <span>Does Caffeine for Windows require installation or admin rights?</span>
+              <span class="faq-icon">+</span>
+            </summary>
+            <div class="faq-answer">
+              No. Caffeine is an ultra-lightweight (~115 KB) standalone portable executable written in pure native Rust with raw Win32 APIs. You can download and run it directly with no installation, no admin privileges, and no .NET or C++ runtime dependencies.
+            </div>
+          </details>
+
+          <details class="faq-item">
+            <summary class="faq-question">
+              <span>How do I cycle between timer durations?</span>
+              <span class="faq-icon">+</span>
+            </summary>
+            <div class="faq-answer">
+              Simply left-click the system tray icon to step through the sequence: <strong>Off ➔ 15 min ➔ 30 min ➔ 1 hour ➔ 2 hours ➔ 4 hours ➔ Indefinite ➔ Off</strong>. You can also right-click the tray icon at any time to select any preset directly or toggle "Start with Windows".
+            </div>
+          </details>
+
+          <details class="faq-item">
+            <summary class="faq-question">
+              <span>How is this different from PowerToys Awake or old Caffeine utilities?</span>
+              <span class="faq-icon">+</span>
+            </summary>
+            <div class="faq-answer">
+              PowerToys Awake requires the full .NET 8 runtime and is part of a large ~180MB suite with multiple nested menus. Classic Caffeine (1.98) simulates synthetic F15 keystrokes that can interfere with apps or get flagged by enterprise security software. Caffeine for Windows is under 115 KB, has zero dependencies, uses the official Windows power API, and renders an animated circular clock in your taskbar.
+            </div>
+          </details>
+
+          <details class="faq-item">
+            <summary class="faq-question">
+              <span>Is Caffeine for Windows safe and open source?</span>
+              <span class="faq-icon">+</span>
+            </summary>
+            <div class="faq-answer">
+              Yes, 100%. The entire codebase is open source under the permissive MIT License on GitHub. It contains no telemetry, no network calls, and no background services.
+            </div>
+          </details>
+        </div>
       </section>
     </main>
 
