@@ -28,6 +28,8 @@ It prevents your PC and screen from sleeping using official Windows power manage
 - **One-Click Cycling:** Left-click the tray icon to cycle timers seamlessly:
   $$\text{Off} \longrightarrow \text{15 min} \longrightarrow \text{30 min} \longrightarrow \text{1 hr} \longrightarrow \text{2 hr} \longrightarrow \text{4 hr} \longrightarrow \text{Indefinite} \longrightarrow \text{Off}$$
 - **Context Menu:** Right-click to directly jump to any preset, toggle **"Start with Windows"**, or exit.
+- **Dark Mode Aware:** Automatically detects system-wide Windows dark mode and applies a native dark theme to the context menu and GDI tray icon rendering.
+- **Auto Reset on Activity:** Toggle **"Auto Reset on Activity"** from the tray menu to restart the active countdown whenever mouse or keyboard input is detected.
 - **Safe & Native:** Uses `SetThreadExecutionState` instead of simulating fake keystrokes (unlike old Caffeine tools that send F15 or jitter mice).
 - **Single Instance:** Enforced via Win32 Named Mutex to prevent duplicate icons.
 
@@ -67,6 +69,12 @@ Every second, an in-memory 32×32 bitmap and 1-bit transparency mask are drawn w
 Enabling "Start with Windows" registers an entry in:
 `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`
 No admin rights or UAC elevation required.
+
+### 4. Dark Mode Support
+The application reads the system theme via the registry key `HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize`. It loads `uxtheme.dll` and uses `SetPreferredAppMode` with `AllowDarkModeForWindow` (via a CBT hook on `#32768` dropdown menus) to force dark rendering on context menus and UI elements.
+
+### 5. Auto Reset on Activity
+When **"Auto Reset on Activity"** is enabled from the tray context menu, the application monitors system-wide input idle time using `GetLastInputInfo`. On any detected change in user activity (mouse or keyboard), the active timer's countdown is reset to its full duration from the moment of activity.
 
 ---
 
