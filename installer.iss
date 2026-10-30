@@ -18,12 +18,12 @@ DisableProgramGroupPage=no
 PrivilegesRequired=lowest
 LicenseFile=LICENSE
 Compression=lzma
-SolidProcessing=yes
+SolidCompression=yes
 WizardStyle=modern
-ArchitecturesAllowed=x64
-ArchitecturesInstallIn64BitMode=x64
+ArchitecturesAllowed=x64compatible
+ArchitecturesInstallIn64BitMode=x64compatible
 OutputDir=dist
-OutputBaseFilename=setup
+OutputBaseFilename=caffeine-win-setup
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
@@ -36,11 +36,11 @@ Source: "target\release\{#MyAppExecutable}"; DestDir: "{app}"; Flags: ignorevers
 Source: "README.md"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
-Name: "{autostartmenu}\Programs\{#MyAppName}.lnk"; Target: "{app}\{#MyAppExecutable}"; WorkingDir: "{autopf}"; Tasks: autostart
-Name: "{autodesktop}\{#MyAppName}.lnk"; Target: "{app}\{#MyAppExecutable}"; WorkingDir: "{autopf}"; Flags: ignoreversion
+Name: "{autostartmenu}\Programs\{#MyAppName}.lnk"; Filename: "{app}\{#MyAppExecutable}"; WorkingDir: "{autopf}"; Tasks: autostart
+Name: "{autodesktop}\{#MyAppName}.lnk"; Filename: "{app}\{#MyAppExecutable}"; WorkingDir: "{autopf}"
 
 [Run]
-Filename: "{app}\{#MyAppExecutable}"; Description: "Launch {#MyAppName}"; Flags: nowait postinstall skipifsilent; Check: not IsTaskSelected('autostart')
+Filename: "{app}\{#MyAppExecutable}"; Description: "Launch {#MyAppName}"; Flags: nowait postinstall skipifsilent; Check: not WizardIsTaskSelected('autostart')
 
 [Registry]
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "{#MyAppName}"; ValueData: "{app}\{#MyAppExecutable}"; Flags: uninsdeletevalue; Tasks: autostart

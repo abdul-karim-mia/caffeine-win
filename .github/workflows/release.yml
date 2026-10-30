@@ -101,22 +101,16 @@ jobs:
           # Create Zip distribution
           Compress-Archive -Path dist\* -DestinationPath "dist\caffeine-win-windows-x64.zip"
 
-          # Move installer to dist
-          if (Test-Path setup.exe) {
-            Copy-Item setup.exe -Destination dist\setup.exe
-          } elseif (Test-Path "dist\setup.exe") {
-            # Already in dist
-          }
-
           # Compute SHA-256 hashes
           $exeHash = (Get-FileHash -Path dist\caffeine-win.exe -Algorithm SHA256).Hash
           $zipHash = (Get-FileHash -Path "dist\caffeine-win-windows-x64.zip" -Algorithm SHA256).Hash
-          $setupHash = if (Test-Path "dist\setup.exe") { (Get-FileHash -Path "dist\setup.exe" -Algorithm SHA256).Hash } else { "" }
+          $setupPath = "dist\caffeine-win-setup.exe"
+          $setupHash = if (Test-Path $setupPath) { (Get-FileHash -Path $setupPath -Algorithm SHA256).Hash } else { "" }
 
           "$exeHash  caffeine-win.exe" | Out-File -Encoding ascii dist\caffeine-win.exe.sha256
           "$zipHash  caffeine-win-windows-x64.zip" | Out-File -Encoding ascii dist\caffeine-win-windows-x64.zip.sha256
-          if (Test-Path "dist\setup.exe") {
-              "$setupHash  setup.exe" | Out-File -Encoding ascii dist\setup.exe.sha256
+          if (Test-Path $setupPath) {
+              "$setupHash  caffeine-win-setup.exe" | Out-File -Encoding ascii dist\caffeine-win-setup.exe.sha256
           }
 
           Write-Host "Assets packaged successfully:"
@@ -130,10 +124,10 @@ jobs:
           files: |
             dist/caffeine-win.exe
             dist/caffeine-win-windows-x64.zip
-            dist/setup.exe
+            dist/caffeine-win-setup.exe
             dist/caffeine-win.exe.sha256
             dist/caffeine-win-windows-x64.zip.sha256
-            dist/setup.exe.sha256
+            dist/caffeine-win-setup.exe.sha256
           prerelease: ${{ env.IS_PRERELEASE == 'true' }}
           draft: false
           generate_release_notes: true
