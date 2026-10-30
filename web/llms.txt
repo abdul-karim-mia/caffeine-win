@@ -1,0 +1,130 @@
+# Caffeine for Windows 11 — Project Documentation (LLM/AI Consumption)
+
+## Summary
+
+**Caffeine for Windows 11** is a lightweight (115 KB), zero-dependency, native Win32 system-tray utility that prevents Windows 11 PCs and displays from sleeping during user-selected countdown timers.
+
+## Repository
+
+- **URL:** https://github.com/abdul-karim-mia/caffeine-win
+- **License:** MIT (see `LICENSE`)
+- **Language/Runtime:** Rust (stable), `windows-sys` crate (0.59), pure native Win32 APIs — no .NET, no C/C++ runtime.
+
+## Build & Install
+
+### Prerequisites
+
+- Rust toolchain (stable) — installed via [rustup](https://rustup.rs).
+- Windows host with Win32 headers (or cross-compile via `x86_64-pc-windows-gnu` / `x86_64-pc-windows-msvc`).
+
+### Commands
+
+```bash
+# Clone
+git clone https://github.com/abdul-karim-mia/caffeine-win.git
+cd caffeine-win
+
+# Build optimized release binary (~115 KB .exe)
+cargo build --release --locked
+
+# Run unit tests
+cargo test --release
+
+# Clean build artifacts
+cargo clean
+```
+
+### Release Profile
+
+Defined in `Cargo.toml`:
+
+```ini
+[profile.release]
+opt-level = "z"      # Optimize for size
+lto = true           # Link-Time Optimization across crates
+codegen-units = 1   # Single codegen unit for maximal optimization
+panic = "abort"     # Strip panic unwinding for binary-size reduction
+strip = true
+```
+
+## Source Layout
+
+| Path | Purpose |
+|------|---------|
+| `src/main.rs` | Win32 message loop, tray icon registration, left/right-click handlers, shutdown cleanup. |
+| `src/icon.rs` | GDI+-based animated pie-clock renderer — blue → amber → red countdown slices. |
+| `src/state.rs` | Timer lifecycle: step cycles (`Off → 15m → 30m → 1h → 2h → 4h → Indefinite → Off`), progress ratio, tooltip text, formatting helpers. |
+| `src/keepawake.rs` | P/Invoke wrapper around `SetThreadExecutionState` (`ES_CONTINUOUS \| ES_SYSTEM_REQUIRED \| ES_DISPLAY_REQUIRED`). |
+| `src/single_instance.rs` | Named-mutex gate ensuring single running instance. |
+| `src/autostart.rs` | Registry `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` toggle for login persistence. |
+| `src/tests.rs` | 4 unit tests: cycle sequence, ticking decrement, indefinite mode edge-case, progress ratio range. |
+| `src/lib.rs` | Module declarations / re-exports. |
+
+## Usage
+
+### Default Hot-Keys
+
+| Action | Description |
+|--------|-------------|
+| **Left-click** tray icon | Cycle through timer presets. |
+| **Right-click** tray icon | Pop-up context menu with quick-select and autostart toggle. |
+| **Esc / Exit menu item** | Graceful shutdown — clears `SetThreadExecutionState` and restores normal power behavior. |
+
+### Cycle Steps
+
+| Order | Mode | Duration | Visual |
+|-------|------|----------|--------|
+| 0 | Off | — | Static icon |
+| 1 | 15m | 900s | Blue pie shrink |
+| 2 | 30m | 1800s | Blue pie shrink |
+| 3 | 1h | 3600s | Blue→amber transition |
+| 4 | 2h | 7200s | Amber pie shrink |
+| 5 | 4h | 14400s | Amber→red transition |
+| 6 | Indefinite | ∞ | Full blue glow |
+
+## Web Presence (/web)
+
+| File | Purpose |
+|------|---------|
+| `index.html` | SEO-optimized static landing page with interactive simulator, dark theme, FAQ accordion. |
+| `favicon.svg` | Inline SVG icon used in browser tabs, PWA manifest, and Apple touch-icon. |
+| `og-image.png` | 1200×630 Twitter/OpenGraph social preview card (PNG for broad compatibility). |
+| `og-image.svg` | Source vector editor file for the preview image. |
+| `robots.txt` | Sitemap directive for crawlers. |
+| `sitemap.xml` | Single-page sitemap. |
+| `site.webmanifest` | PWA installability manifest. |
+
+## SEO & Structured Data
+
+### Meta Tags
+
+```html
+<meta property="og:image" content="https://caffeine-win.vercel.app/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+```
+
+### JSON-LD
+
+Two structured-data blocks are embedded in `index.html`:
+
+1. `@type: SoftwareApplication` — app category, pricing (free), version, features, aggregate rating.
+2. `@type: FAQPage` — 4 FAQ entries (keep-awake mechanism, no-install, cycling, comparison vs PowerToxs / legacy Caffeine).
+
+## CI/CD
+
+| Workflow | Trigger | Purpose |
+|----------|---------|---------|
+| `.github/workflows/ci.yml` | `push` / `pull_request` on `main` | Builds test binary, runs unit tests, verifies `.exe` size. |
+| `.github/workflows/release.yml` | `push` to `main`, `workflow_dispatch`, or `v*` tag | Builds release binary, uploads SHA-256 checksums + `.zip` assets, auto-creates GitHub Release. |
+
+## Versioning Policy
+
+- Releases driven by `Cargo.toml`'s `version` field.
+- Pushing to `main` either:
+  - If `v<version>` tag does **not** exist → creates it and publishes a tagged GitHub Release.
+  - If tag already exists → publishes to a rolling `latest` release.
+- Manual trigger: Run `Release` workflow in GitHub Actions UI (`workflow_dispatch`).
+
+## License Compliance
+
+All source code and web assets are licensed under the MIT License — see `LICENSE` or the short identifier in `Cargo.toml`: `license = "MIT"`.
