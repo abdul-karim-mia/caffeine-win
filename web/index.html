@@ -41,39 +41,128 @@
         radial-gradient(circle at 100% 40%, rgba(99, 102, 241, 0.08) 0%, transparent 50%);
     }
 
-    /* Container */
-    .container {
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 40px 24px;
+    /* Screen Off Overlay Simulator */
+    #screenOffOverlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background-color: #000000;
+      z-index: 999999;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
     }
 
-    /* Header */
-    header {
+    #screenOffOverlay.sleeping {
+      opacity: 1;
+      pointer-events: all;
+      cursor: none;
+    }
+
+    .sleep-prompt {
+      color: #334155;
+      font-size: 0.95rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-weight: 500;
+      margin-top: 20px;
+      animation: pulseText 2.5s infinite ease-in-out;
+    }
+
+    @keyframes pulseText {
+      0%, 100% { opacity: 0.3; }
+      50% { opacity: 0.8; }
+    }
+
+    /* Top Navigation with Live Caffeine Status */
+    .top-nav {
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      backdrop-filter: blur(16px);
+      background: rgba(11, 15, 25, 0.75);
+      border-bottom: 1px solid var(--card-border);
+      padding: 12px 24px;
+    }
+
+    .nav-inner {
+      max-width: 1100px;
+      margin: 0 auto;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 60px;
     }
 
     .brand {
       display: flex;
       align-items: center;
       gap: 12px;
-      font-size: 1.25rem;
+      font-size: 1.15rem;
       font-weight: 700;
       letter-spacing: -0.02em;
     }
 
     .brand-icon {
-      width: 36px;
-      height: 36px;
+      width: 32px;
+      height: 32px;
       background: linear-gradient(135deg, #0284c7, #38bdf8);
-      border-radius: 10px;
+      border-radius: 8px;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 4px 14px var(--accent-glow);
+      box-shadow: 0 4px 12px var(--accent-glow);
+    }
+
+    /* Top Nav Caffeine Widget */
+    .nav-caffeine-widget {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--card-border);
+      padding: 6px 14px;
+      border-radius: 9999px;
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      user-select: none;
+    }
+
+    .nav-caffeine-widget:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(56, 189, 248, 0.4);
+      box-shadow: 0 0 16px var(--accent-glow);
+      transform: translateY(-1px);
+    }
+
+    .nav-caffeine-widget:active {
+      transform: scale(0.96);
+    }
+
+    .nav-caffeine-info {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.15;
+    }
+
+    .nav-caffeine-title {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+    }
+
+    .nav-caffeine-timer {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--accent);
+      font-family: 'JetBrains Mono', monospace;
     }
 
     .nav-links {
@@ -85,7 +174,7 @@
     .nav-link {
       color: var(--text-muted);
       text-decoration: none;
-      font-size: 0.95rem;
+      font-size: 0.9rem;
       transition: color 0.2s;
     }
 
@@ -93,10 +182,17 @@
       color: var(--text);
     }
 
+    /* Container */
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 40px 24px;
+    }
+
     /* Hero */
     .hero {
       text-align: center;
-      margin-bottom: 70px;
+      margin: 30px 0 60px;
     }
 
     .badges {
@@ -128,9 +224,9 @@
     }
 
     h1 {
-      font-size: clamp(2.5rem, 6vw, 4.2rem);
+      font-size: clamp(2.4rem, 5.5vw, 4rem);
       font-weight: 800;
-      line-height: 1.1;
+      line-height: 1.15;
       letter-spacing: -0.03em;
       margin-bottom: 20px;
       background: linear-gradient(180deg, #ffffff 0%, #cbd5e1 100%);
@@ -139,9 +235,9 @@
     }
 
     .subtitle {
-      font-size: 1.25rem;
+      font-size: 1.2rem;
       color: var(--text-muted);
-      max-width: 650px;
+      max-width: 680px;
       margin: 0 auto 36px;
     }
 
@@ -150,7 +246,7 @@
       gap: 16px;
       justify-content: center;
       flex-wrap: wrap;
-      margin-bottom: 48px;
+      margin-bottom: 30px;
     }
 
     .btn {
@@ -191,6 +287,44 @@
       transform: translateY(-2px);
     }
 
+    /* Simulation Control Banner */
+    .sim-banner {
+      background: rgba(56, 189, 248, 0.08);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      border-radius: 12px;
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      max-width: 780px;
+      margin: 0 auto 50px;
+      flex-wrap: wrap;
+    }
+
+    .sim-banner-text {
+      font-size: 0.9rem;
+      color: #cbd5e1;
+      text-align: left;
+    }
+
+    .sim-quick-btn {
+      background: rgba(56, 189, 248, 0.2);
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      color: #e0f2fe;
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+
+    .sim-quick-btn:hover {
+      background: rgba(56, 189, 248, 0.35);
+      transform: translateY(-1px);
+    }
+
     /* Interactive Simulator */
     .simulator-card {
       background: var(--card-bg);
@@ -208,7 +342,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 28px;
+      margin-bottom: 24px;
     }
 
     .simulator-title {
@@ -303,12 +437,6 @@
       white-space: nowrap;
       pointer-events: none;
       box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
-      animation: fadeIn 0.2s ease-out;
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translate(-50%, 6px); }
-      to { opacity: 1; transform: translate(-50%, 0); }
     }
 
     .sim-details {
@@ -424,36 +552,6 @@
       color: var(--accent);
     }
 
-    /* Install Command Box */
-    .install-box {
-      background: #0f172a;
-      border: 1px solid var(--card-border);
-      border-radius: 12px;
-      padding: 16px 20px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      max-width: 600px;
-      margin: 0 auto 80px;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.9rem;
-    }
-
-    .copy-btn {
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      color: var(--text);
-      padding: 6px 14px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 0.8rem;
-      transition: all 0.2s;
-    }
-
-    .copy-btn:hover {
-      background: rgba(255, 255, 255, 0.15);
-    }
-
     /* Footer */
     footer {
       border-top: 1px solid var(--card-border);
@@ -474,11 +572,21 @@
   </style>
 </head>
 <body>
-  <div class="container">
-    <header>
+  <!-- Full Screen Sleep / Display Off Simulator Overlay -->
+  <div id="screenOffOverlay">
+    <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="1.5">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+    </svg>
+    <div style="font-size: 1.4rem; font-weight: 600; color: #64748b; margin-top: 16px;">Screen Off (PC Inactive)</div>
+    <div class="sleep-prompt">Move mouse or press any key to wake up</div>
+  </div>
+
+  <!-- Top Sticky Navigation with Live Caffeine Status -->
+  <div class="top-nav">
+    <div class="nav-inner">
       <div class="brand">
         <div class="brand-icon">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <path d="M17 8h1a4 4 0 1 1 0 8h-1"></path>
             <path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"></path>
             <line x1="6" y1="2" x2="6" y2="4"></line>
@@ -489,13 +597,24 @@
         <span>Caffeine-Win</span>
       </div>
 
+      <!-- Live Header Widget -->
+      <div class="nav-caffeine-widget" id="topNavWidget" title="Click to cycle Caffeine timer">
+        <canvas id="topNavCanvas" width="24" height="24"></canvas>
+        <div class="nav-caffeine-info">
+          <span class="nav-caffeine-title" id="topNavMode">Caffeine: Off</span>
+          <span class="nav-caffeine-timer" id="topNavTimer">Sleep in 10s</span>
+        </div>
+      </div>
+
       <nav class="nav-links">
         <a href="#features" class="nav-link">Features</a>
         <a href="#comparison" class="nav-link">Comparison</a>
         <a href="https://github.com/abdul-karim-mia/caffeine-win" target="_blank" class="nav-link">GitHub ↗</a>
       </nav>
-    </header>
+    </div>
+  </div>
 
+  <div class="container">
     <main>
       <section class="hero">
         <div class="badges">
@@ -524,11 +643,19 @@
         </div>
       </section>
 
+      <!-- Sleep Simulation Notice Banner -->
+      <div class="sim-banner">
+        <div class="sim-banner-text">
+          💡 <strong>Live Sleep Simulation:</strong> When Caffeine is <strong>Off</strong>, the webpage will idle out and turn the screen black after 10 seconds of inactivity. Click the top widget or the tray icon below to keep it awake!
+        </div>
+        <button class="sim-quick-btn" id="quickTestBtn">Set 10s Demo Timer</button>
+      </div>
+
       <!-- Interactive Simulator -->
       <section class="simulator-card">
         <div class="simulator-header">
-          <div class="simulator-title">Interactive System Tray Simulator</div>
-          <span class="simulator-hint">👈 Click the tray icon to cycle timers</span>
+          <div class="simulator-title">System Tray Interactive Preview</div>
+          <span class="simulator-hint">👈 Click tray or top icon to cycle</span>
         </div>
 
         <div class="taskbar">
@@ -554,7 +681,7 @@
               <div class="tray-tooltip" id="trayTooltip">Caffeine: Off (Click to activate)</div>
             </div>
 
-            <!-- Fake Windows tray items -->
+            <!-- Windows tray decorative items -->
             <div class="taskbar-icon">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M5 12.55a11 11 0 0 1 14.08 0"></path>
@@ -575,16 +702,16 @@
 
         <div class="sim-details">
           <div class="sim-box">
-            <div class="sim-label">Current Mode</div>
+            <div class="sim-label">Caffeine Mode</div>
             <div class="sim-val" id="modeVal">Off</div>
           </div>
           <div class="sim-box">
-            <div class="sim-label">Time Remaining</div>
+            <div class="sim-label">Active Awake Timer</div>
             <div class="sim-val" id="timeVal">00:00</div>
           </div>
           <div class="sim-box">
-            <div class="sim-label">Power State</div>
-            <div class="sim-val" id="powerVal" style="color: #64748b;">Normal (Idle Sleep Allowed)</div>
+            <div class="sim-label">Screen & Power State</div>
+            <div class="sim-val" id="powerVal" style="color: #64748b;">Idle Sleep Active</div>
           </div>
         </div>
       </section>
@@ -715,7 +842,7 @@
   </div>
 
   <script>
-    // Simulator Script
+    // State definitions
     const STEPS = [
       { mode: 'Off', total: 0, label: 'Off' },
       { mode: '15m', total: 15 * 60, label: '15 Minutes' },
@@ -730,56 +857,73 @@
     let remSecs = 0;
     let initialSecs = 0;
 
-    const canvas = document.getElementById('trayCanvas');
-    const ctx = canvas.getContext('2d');
+    // Idle sleep detection simulation
+    const IDLE_TIMEOUT_SECS = 10;
+    let idleSeconds = 0;
+    let isSleeping = false;
+
+    // DOM Elements
+    const screenOverlay = document.getElementById('screenOffOverlay');
+    const trayCanvas = document.getElementById('trayCanvas');
+    const topNavCanvas = document.getElementById('topNavCanvas');
     const trayBtn = document.getElementById('trayBtn');
+    const topNavWidget = document.getElementById('topNavWidget');
     const tooltip = document.getElementById('trayTooltip');
     const modeVal = document.getElementById('modeVal');
     const timeVal = document.getElementById('timeVal');
     const powerVal = document.getElementById('powerVal');
+    const topNavMode = document.getElementById('topNavMode');
+    const topNavTimer = document.getElementById('topNavTimer');
+    const quickTestBtn = document.getElementById('quickTestBtn');
 
-    function drawIcon(progress, isInfinite, isActive) {
-      ctx.clearRect(0, 0, 32, 32);
-      const cx = 16, cy = 16, r = 13;
+    // Canvas drawing helper
+    function drawClockIcon(canvasEl, progress, isInfinite, isActive) {
+      const ctx = canvasEl.getContext('2d');
+      const size = canvasEl.width;
+      ctx.clearRect(0, 0, size, size);
+
+      const cx = size / 2;
+      const cy = size / 2;
+      const r = (size / 2) - 3;
 
       if (!isActive) {
-        // Off: dim ring
+        // Off: dim circle
         ctx.strokeStyle = '#475569';
-        ctx.lineWidth = 2;
+        ctx.lineWidth = size > 24 ? 2 : 1.5;
         ctx.beginPath();
         ctx.arc(cx, cy, r, 0, Math.PI * 2);
         ctx.stroke();
 
         ctx.fillStyle = '#64748b';
         ctx.beginPath();
-        ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+        ctx.arc(cx, cy, size > 24 ? 3 : 2, 0, Math.PI * 2);
         ctx.fill();
       } else if (isInfinite) {
         // Glowing cyan ring
         ctx.strokeStyle = '#38bdf8';
-        ctx.lineWidth = 2.5;
+        ctx.lineWidth = size > 24 ? 2.5 : 2;
         ctx.beginPath();
         ctx.arc(cx, cy, r, 0, Math.PI * 2);
         ctx.stroke();
 
         ctx.fillStyle = '#38bdf8';
         ctx.beginPath();
-        ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+        ctx.arc(cx, cy, size > 24 ? 4 : 2.5, 0, Math.PI * 2);
         ctx.fill();
       } else {
-        // Track
+        // Active: track
         ctx.strokeStyle = '#334155';
-        ctx.lineWidth = 2;
+        ctx.lineWidth = size > 24 ? 2 : 1.5;
         ctx.beginPath();
         ctx.arc(cx, cy, r, 0, Math.PI * 2);
         ctx.stroke();
 
-        // Color based on remaining
+        // Color shift
         let color = '#38bdf8';
         if (progress <= 0.05) color = '#ef4444';
         else if (progress <= 0.20) color = '#f59e0b';
 
-        // Pie sweep
+        // Clock Pie sweep
         ctx.fillStyle = color;
         ctx.beginPath();
         ctx.moveTo(cx, cy);
@@ -789,9 +933,9 @@
         ctx.closePath();
         ctx.fill();
 
-        // Hand
+        // Clock hand
         ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 1.5;
+        ctx.lineWidth = size > 24 ? 1.5 : 1;
         ctx.beginPath();
         ctx.moveTo(cx, cy);
         ctx.lineTo(cx + r * Math.cos(endAngle), cy + r * Math.sin(endAngle));
@@ -799,38 +943,26 @@
       }
     }
 
-    function updateUI() {
-      const step = STEPS[stepIdx];
-      const isActive = step.mode !== 'Off';
-      const isInf = step.mode === 'Infinite';
+    function renderAllIcons(progress, isInfinite, isActive) {
+      drawClockIcon(trayCanvas, progress, isInfinite, isActive);
+      drawClockIcon(topNavCanvas, progress, isInfinite, isActive);
+    }
 
-      modeVal.textContent = step.label;
-
-      if (!isActive) {
-        timeVal.textContent = '00:00';
-        powerVal.textContent = 'Normal (Sleep Allowed)';
-        powerVal.style.color = '#64748b';
-        tooltip.textContent = 'Caffeine: Off (Click to activate)';
-        drawIcon(0, false, false);
-      } else if (isInf) {
-        timeVal.textContent = '∞';
-        powerVal.textContent = 'Awake (Continuous)';
-        powerVal.style.color = '#38bdf8';
-        tooltip.textContent = 'Caffeine: Always Awake (Indefinite)';
-        drawIcon(1, true, true);
-      } else {
-        const m = Math.floor(remSecs / 60);
-        const s = remSecs % 60;
-        timeVal.textContent = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-        powerVal.textContent = 'Active (Display & CPU Awake)';
-        powerVal.style.color = '#10b981';
-        tooltip.textContent = `Caffeine: ${m}m ${s}s remaining`;
-        const prog = initialSecs > 0 ? remSecs / initialSecs : 0;
-        drawIcon(prog, false, true);
+    function wakeUp() {
+      idleSeconds = 0;
+      if (isSleeping) {
+        isSleeping = false;
+        screenOverlay.classList.remove('sleeping');
       }
     }
 
-    trayBtn.addEventListener('click', () => {
+    // Wake events
+    ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll'].forEach(evt => {
+      window.addEventListener(evt, wakeUp, { passive: true });
+    });
+
+    function cycleNext() {
+      wakeUp();
       stepIdx = (stepIdx + 1) % STEPS.length;
       const step = STEPS[stepIdx];
       if (step.total > 0) {
@@ -841,20 +973,90 @@
         initialSecs = 0;
       }
       updateUI();
+    }
+
+    trayBtn.addEventListener('click', cycleNext);
+    topNavWidget.addEventListener('click', cycleNext);
+
+    quickTestBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      wakeUp();
+      stepIdx = 1; // 15m slot replaced with 10s demo
+      remSecs = 10;
+      initialSecs = 10;
+      updateUI();
     });
 
-    // 1-second ticker for simulator
+    function updateUI() {
+      const step = STEPS[stepIdx];
+      const isActive = step.mode !== 'Off';
+      const isInf = step.mode === 'Infinite';
+
+      modeVal.textContent = step.label;
+      topNavMode.textContent = `Caffeine: ${step.label}`;
+
+      if (!isActive) {
+        timeVal.textContent = '00:00';
+        powerVal.textContent = 'Normal (Sleep Allowed)';
+        powerVal.style.color = '#64748b';
+        tooltip.textContent = 'Caffeine: Off (Click to activate)';
+        const sleepCountdown = Math.max(0, IDLE_TIMEOUT_SECS - idleSeconds);
+        topNavTimer.textContent = `Sleep in ${sleepCountdown}s`;
+        topNavTimer.style.color = '#94a3b8';
+        renderAllIcons(0, false, false);
+      } else if (isInf) {
+        timeVal.textContent = '∞';
+        powerVal.textContent = 'Always Awake (Continuous)';
+        powerVal.style.color = '#38bdf8';
+        tooltip.textContent = 'Caffeine: Always Awake (Indefinite)';
+        topNavTimer.textContent = 'Awake: ∞';
+        topNavTimer.style.color = '#38bdf8';
+        renderAllIcons(1, true, true);
+      } else {
+        const m = Math.floor(remSecs / 60);
+        const s = remSecs % 60;
+        const timeStr = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        timeVal.textContent = timeStr;
+        powerVal.textContent = 'Active (Display & CPU Kept Awake)';
+        powerVal.style.color = '#10b981';
+        tooltip.textContent = `Caffeine: ${m}m ${s}s remaining`;
+        topNavTimer.textContent = `Awake: ${timeStr}`;
+        topNavTimer.style.color = '#10b981';
+        const prog = initialSecs > 0 ? remSecs / initialSecs : 0;
+        renderAllIcons(prog, false, true);
+      }
+    }
+
+    // 1-second master loop
     setInterval(() => {
       const step = STEPS[stepIdx];
-      if (step.mode !== 'Off' && step.mode !== 'Infinite') {
-        if (remSecs > 0) {
-          remSecs--;
-          if (remSecs === 0) {
-            stepIdx = 0;
+      const isCaffeineActive = step.mode !== 'Off';
+
+      if (isCaffeineActive) {
+        // Caffeine is keeping system awake: reset idle
+        idleSeconds = 0;
+        if (isSleeping) {
+          wakeUp();
+        }
+
+        if (step.mode !== 'Infinite') {
+          if (remSecs > 0) {
+            remSecs--;
+            if (remSecs === 0) {
+              stepIdx = 0; // Expiration -> switches to Off
+            }
           }
-          updateUI();
+        }
+      } else {
+        // Caffeine is OFF: count idle time
+        idleSeconds++;
+        if (idleSeconds >= IDLE_TIMEOUT_SECS && !isSleeping) {
+          isSleeping = true;
+          screenOverlay.classList.add('sleeping');
         }
       }
+
+      updateUI();
     }, 1000);
 
     // Initial draw
