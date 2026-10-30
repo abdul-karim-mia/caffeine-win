@@ -342,7 +342,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 24px;
+      margin-bottom: 36px;
     }
 
     .simulator-title {
@@ -422,12 +422,12 @@
       transform: scale(0.94);
     }
 
-    /* Tooltip */
+    /* Tooltip: reveals on hover / focus just like Windows 11 system tray */
     .tray-tooltip {
       position: absolute;
-      bottom: 54px;
+      bottom: calc(100% + 10px);
       left: 50%;
-      transform: translateX(-50%);
+      transform: translate(-50%, 4px);
       background: #1e293b;
       color: #f8fafc;
       border: 1px solid rgba(255, 255, 255, 0.15);
@@ -437,6 +437,15 @@
       white-space: nowrap;
       pointer-events: none;
       box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+      opacity: 0;
+      transition: opacity 0.15s ease, transform 0.15s ease;
+      z-index: 20;
+    }
+
+    .caffeine-tray-wrapper:hover .tray-tooltip,
+    .caffeine-tray-wrapper:focus-within .tray-tooltip {
+      opacity: 1;
+      transform: translate(-50%, 0);
     }
 
     .sim-details {
