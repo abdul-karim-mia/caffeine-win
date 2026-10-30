@@ -42,25 +42,7 @@ jobs:
             exit 1
           }
 
-      - name: Install Inno Setup
-        uses: InnoSetup/install-inno-setup@v2
-
-      - name: Verify installer build
-        shell: pwsh
-        run: |
-          # Update version in installer script for CI validation
-          $installerContent = Get-Content installer.iss -Raw
-          $version = "ci-validate"
-          $installerContent = $installerContent -replace 'MyAppVersion = "[^"]*"', "MyAppVersion = `"$version`""
-          Set-Content -Path installer.iss -Value $installerContent
-
-          $innoPath = [Environment]::GetFolderPath("ProgramFiles") + "\Inno Setup 2024\ISCC.exe"
-          if (-not (Test-Path $innoPath)) {
-              $innoPath = [Environment]::GetFolderPath("ProgramFiles") + "\Inno Setup\IscsI3.exe"
-          }
-          if (Test-Path $innoPath) {
-              & $innoPath installer.iss /SP- /VERYSILENT
-          } else {
-              Write-Error "Inno Setup compiler not found"
-              exit 1
-          }
+      - name: Compile Inno Setup Installer
+        uses: Minionguyjpro/Inno-Setup-Action@v1.2.9
+        with:
+          path: installer.iss

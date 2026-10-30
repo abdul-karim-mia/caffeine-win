@@ -37,6 +37,7 @@ jobs:
             $tag = "${{ github.ref_name }}"
             Write-Host "Triggered by tag: $tag"
             echo "RELEASE_TAG=$tag" >> $env:GITHUB_ENV
+            echo "RELEASE_VERSION=${{ github.ref_name }}" >> $env:GITHUB_ENV
             echo "IS_PRERELEASE=false" >> $env:GITHUB_ENV
             echo "RELEASE_NAME=Caffeine for Windows $tag" >> $env:GITHUB_ENV
             exit 0
@@ -75,30 +76,22 @@ jobs:
       - name: Build Optimized Release Binary
         run: cargo build --release
 
-      - name: Install Inno Setup
-        uses: InnoSetup/install-inno-setup@v2
+      - name: Update Version in Installer Script
+        shell: pwsh
+        run: |
+          $installerContent = Get-Content installer.iss -Raw
+          $installerContent = $installerContent -replace 'MyAppVersion = "[^"]*"', "MyAppVersion = `"$env:RELEASE_VERSION`""
+          Set-Content -Path installer.iss -Value $installerContent
+
+      - name: Compile Inno Setup Installer
+        uses: Minionguyjpro/Inno-Setup-Action@v1.2.9
+        with:
+          path: installer.iss
 
       - name: Package Release Assets & Compute Checksums
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path dist
-
-          # Update version in installer script
-          $installerContent = Get-Content installer.iss -Raw
-          $installerContent = $installerContent -replace 'MyAppVersion = "[^"]*"', "MyAppVersion = `"$env:RELEASE_VERSION`""
-          Set-Content -Path installer.iss -Value $installerContent
-
-          # Compile installer
-          $innoPath = [Environment]::GetFolderPath("ProgramFiles") + "\Inno Setup 2024\ISCC.exe"
-          if (-not (Test-Path $innoPath)) {
-              $innoPath = [Environment]::GetFolderPath("ProgramFiles") + "\Inno Setup\IscsI3.exe"
-          }
-          if (Test-Path $innoPath) {
-              & $innoPath installer.iss /SP- /VERYSILENT
-          } else {
-              Write-Error "Inno Setup compiler not found"
-              exit 1
-          }
 
           # Copy portable artifacts
           Copy-Item target\release\caffeine-win.exe -Destination dist\caffeine-win.exe
@@ -108,9 +101,11 @@ jobs:
           # Create Zip distribution
           Compress-Archive -Path dist\* -DestinationPath "dist\caffeine-win-windows-x64.zip"
 
-          # Move installer to dist if exists
+          # Move installer to dist
           if (Test-Path setup.exe) {
             Copy-Item setup.exe -Destination dist\setup.exe
+          } elseif (Test-Path "dist\setup.exe") {
+            # Already in dist
           }
 
           # Compute SHA-256 hashes
