@@ -80,14 +80,22 @@ When **"Auto Reset on Activity"** is enabled from the tray context menu, the app
 
 ## 📥 Installation & Download
 
+Two distribution options are available from [GitHub Releases](https://github.com/abdul-karim-mia/caffeine-win/releases):
+
+### Portable (.exe)
 1. Download the latest `caffeine-win.exe` from [GitHub Releases](https://github.com/abdul-karim-mia/caffeine-win/releases).
 2. Move it to your preferred folder (e.g. `C:\Users\<User>\AppData\Local\Programs` or your Utilities folder).
 3. Double-click to run!
 4. *(Optional)* Right-click the tray icon and check **"Start with Windows"**.
 
----
+### Installer (setup.exe)
+1. Download `setup.exe` from [GitHub Releases](https://github.com/abdul-karim-mia/caffeine-win/releases).
+2. Run the installer — it creates desktop and Start Menu shortcuts.
+3. *(Optional)* Check **"Start with Windows"** during setup for auto-startup.
+4. *(Optional)* Uninstall anytime via Windows Settings → Apps or the uninstaller shortcut.
 
-## 🛠️ Building from Source
+---
+### 🏗️ Building from Source
 
 ### Prerequisites
 - [Rust](https://rustup.rs/) (stable toolchain)

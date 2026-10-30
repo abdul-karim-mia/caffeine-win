@@ -41,3 +41,26 @@ jobs:
             Write-Error "Release executable not found!"
             exit 1
           }
+
+      - name: Install Inno Setup
+        uses: InnoIDE/install-inno-setup@v2
+
+      - name: Verify installer build
+        shell: pwsh
+        run: |
+          # Update version in installer script for CI validation
+          $installerContent = Get-Content installer.iss -Raw
+          $version = "ci-validate"
+          $installerContent = $installerContent -replace 'MyAppVersion = "[^"]*"', "MyAppVersion = `"$version`""
+          Set-Content -Path installer.iss -Value $installerContent
+
+          $innoPath = [Environment]::GetFolderPath("ProgramFiles") + "\Inno Setup 2024\ISCC.exe"
+          if (-not (Test-Path $innoPath)) {
+              $innoPath = [Environment]::GetFolderPath("ProgramFiles") + "\Inno Setup\IscsI3.exe"
+          }
+          if (Test-Path $innoPath) {
+              & $innoPath installer.iss /SP- /VERYSILENT
+          } else {
+              Write-Error "Inno Setup compiler not found"
+              exit 1
+          }
