@@ -1261,6 +1261,8 @@
           <span class="badge"><span class="badge-dot"></span> Windows 11 Native</span>
           <span class="badge">⚡ 115 KB Executable</span>
           <span class="badge">☕ Zero Dependencies</span>
+          <span class="badge" id="starBadge" style="display:none">⭐ <span id="starCount">–</span> stars</span>
+          <span class="badge" id="dlBadge" style="display:none">⬇️ <span id="dlCount">–</span> downloads</span>
         </div>
 
         <h1>Keep your PC & screen awake.<br>Clean. Minimal. Smart.</h1>
@@ -1804,6 +1806,55 @@
     }
     updateClock();
     setInterval(updateClock, 30000);
+  </script>
+
+  <script>
+    // GitHub stars + total downloads via unauthenticated API (no key needed).
+    // Rate limit: 60 req/hr per IP, so cache result in localStorage for 1 hour.
+    (function () {
+      const API = 'https://api.github.com/repos/abdul-karim-mia/caffeine-win';
+      const CACHE_KEY = 'cw-stats';
+      const TTL = 60 * 60 * 1000;
+
+      function fmt(n) {
+        return n >= 1000 ? (n / 1000).toFixed(n >= 10000 ? 0 : 1).replace(/\.0$/, '') + 'k' : String(n);
+      }
+
+      function show(stars, downloads, ok) {
+        const sb = document.getElementById('starBadge');
+        const db = document.getElementById('dlBadge');
+        if (ok) {
+          sb.style.display = '';
+          document.getElementById('starCount').textContent = fmt(stars);
+          db.style.display = '';
+          document.getElementById('dlCount').textContent = fmt(downloads);
+        }
+      }
+
+      try {
+        const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
+        if (cached && Date.now() - cached.t < TTL) {
+          show(cached.s, cached.d, true);
+          return;
+        }
+      } catch (e) {}
+
+      Promise.all([
+        fetch(API).then(r => r.ok ? r.json() : null).catch(() => null),
+        fetch(API + '/releases').then(r => r.ok ? r.json() : null).catch(() => null)
+      ]).then(([repo, releases]) => {
+        if (!repo) return;
+        const stars = repo.stargazers_count;
+        let downloads = 0;
+        if (Array.isArray(releases)) {
+          for (const rel of releases) {
+            for (const a of (rel.assets || [])) downloads += a.download_count;
+          }
+        }
+        show(stars, downloads, !!repo);
+        try { localStorage.setItem(CACHE_KEY, JSON.stringify({ t: Date.now(), s: stars, d: downloads })); } catch (e) {}
+      });
+    })();
   </script>
 </body>
 </html>
