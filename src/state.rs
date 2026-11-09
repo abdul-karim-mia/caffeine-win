@@ -160,6 +160,26 @@ impl AppState {
             }
         }
     }
+
+    /// One-line status for the grayed menu header row.
+    pub fn status_label(&self) -> String {
+        match self.current_mode {
+            TimerDuration::Off => "Off".to_string(),
+            TimerDuration::Infinite => "Awake — always on".to_string(),
+            _ => format!("Awake — {} left", format_hms(self.remaining_seconds)),
+        }
+    }
+}
+
+/// `H:MM:SS` for hours or `MM:SS` below an hour, no leading zero on minutes.
+pub fn format_hms(seconds: u64) -> String {
+    let secs = seconds % 60;
+    let mins = seconds / 60;
+    if mins >= 60 {
+        format!("{}:{:02}:{:02}", mins / 60, mins % 60, secs)
+    } else {
+        format!("{}:{:02}", mins, secs)
+    }
 }
 
 impl Default for AppState {

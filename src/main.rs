@@ -1,31 +1,25 @@
 #![windows_subsystem = "windows"]
 
-use std::ptr::null_mut;
-use windows_sys::Win32::Foundation::{HMODULE, HWND, LPARAM, LRESULT, POINT, RECT, WPARAM};
-use windows_sys::Win32::System::LibraryLoader::{GetModuleHandleW, GetProcAddress, LoadLibraryW};
-use windows_sys::Win32::System::Threading::GetCurrentThreadId;
-use windows_sys::Win32::System::Registry::{
-    RegCloseKey, RegOpenKeyExW, RegQueryValueExW, HKEY_CURRENT_USER, KEY_READ, REG_DWORD,
-};
-use windows_sys::Win32::UI::Shell::{
-    Shell_NotifyIconGetRect, Shell_NotifyIconW, NIF_ICON, NIF_MESSAGE, NIF_TIP, NIM_ADD,
-    NIM_DELETE, NIM_MODIFY, NOTIFYICONDATAW, NOTIFYICONIDENTIFIER,
-};
-use windows_sys::Win32::UI::WindowsAndMessaging::{
-    AppendMenuW, CallNextHookEx, CreatePopupMenu, CreateWindowExW, DefWindowProcW, DestroyMenu,
-    DestroyWindow,
-    DispatchMessageW, GetClassNameW, GetCursorPos, GetMessageW, KillTimer, PostMessageW,
-    PostQuitMessage, RegisterClassW, RegisterWindowMessageW, SetForegroundWindow, SetTimer,
-    SetWindowsHookExW, TrackPopupMenu, TranslateMessage, UnhookWindowsHookEx, HICON, HMENU,
-    MF_CHECKED, MF_SEPARATOR, MF_STRING, MF_UNCHECKED, MSG, TPM_BOTTOMALIGN, TPM_LEFTALIGN,
-    TPM_RIGHTALIGN, TPM_RIGHTBUTTON, WM_COMMAND, WM_DESTROY, WM_LBUTTONUP, WM_RBUTTONUP,
-    WM_TIMER, WM_USER,
-    WNDCLASSW,
-};
-
 use caffeine_win::icon::{create_tray_icon, destroy_tray_icon};
 use caffeine_win::keepawake::set_keep_awake;
+use caffeine_win::menu::MenuEntry;
 use caffeine_win::state::{AppState, TimerDuration};
+use std::ptr::null_mut;
+use windows_sys::Win32::Foundation::{HWND, LPARAM, LRESULT, POINT, RECT, WPARAM};
+use windows_sys::Win32::System::LibraryLoader::{GetModuleHandleW, GetProcAddress};
+use windows_sys::Win32::System::Registry::{
+    HKEY_CURRENT_USER, KEY_READ, REG_DWORD, RegCloseKey, RegOpenKeyExW, RegQueryValueExW,
+};
+use windows_sys::Win32::UI::Shell::{
+    NIF_ICON, NIF_INFO, NIF_MESSAGE, NIF_TIP, NIIF_INFO, NIM_ADD, NIM_DELETE, NIM_MODIFY,
+    NOTIFYICONDATAW, NOTIFYICONIDENTIFIER, Shell_NotifyIconGetRect, Shell_NotifyIconW,
+};
+use windows_sys::Win32::UI::WindowsAndMessaging::{
+    CreateWindowExW, DefWindowProcW, DestroyWindow, DispatchMessageW, GetCursorPos, GetMessageW,
+    HICON, IDYES, KillTimer, MB_ICONQUESTION, MB_SETFOREGROUND, MB_YESNO, MSG, MessageBoxW,
+    PostQuitMessage, RegisterWindowMessageW, SetTimer, TranslateMessage, WM_COMMAND, WM_DESTROY,
+    WM_LBUTTONUP, WM_RBUTTONUP, WM_TIMER, WM_USER,
+};
 
 const WM_TRAYICON: u32 = WM_USER + 1;
 const TIMER_ID_SECOND: usize = 1001;
@@ -69,25 +63,10 @@ const CMD_2H: usize = 2006;
 const CMD_4H: usize = 2007;
 const CMD_INFINITE: usize = 2008;
 const CMD_AUTOSTART: usize = 2009;
+/// Row identifier for the Options submenu parent; never dispatched.
+const PERSONALIZE_KEY: &str = "Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize";
 
-const WH_CBT: i32 = 5;
-const HCBT_CREATEWND: i32 = 3;
-const PERSONALIZE_KEY: &str =
-    "Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize";
-
-type AllowDarkModeForWindowFn = unsafe extern "system" fn(HWND, i32) -> i32;
-type SetPreferredAppModeFn = unsafe extern "system" fn(i32) -> i32;
-type RefreshImmersiveColorPolicyStateFn = unsafe extern "system" fn();
-type FlushMenuThemesFn = unsafe extern "system" fn();
-type SetWindowThemeFn =
-    unsafe extern "system" fn(HWND, windows_sys::core::PCWSTR, windows_sys::core::PCWSTR) -> i32;
-
-static mut UX_THEME: Option<HMODULE> = None;
-static mut ALLOW_DARK_FOR_WINDOW: Option<AllowDarkModeForWindowFn> = None;
-static mut SET_WINDOW_THEME: Option<SetWindowThemeFn> = None;
 static mut SYSTEM_DARK: bool = false;
-
-const APP_MODE_ALLOW_DARK: i32 = 1;
 
 /// Reads the Windows "AppsUseLightTheme" DWORD. Zero means dark mode.
 fn system_prefers_dark_mode() -> bool {
@@ -123,70 +102,40 @@ fn encode_wide(s: &str) -> Vec<u16> {
 fn init_system_dark() {
     unsafe {
         SYSTEM_DARK = system_prefers_dark_mode();
-
-        let lib = LoadLibraryW(encode_wide("uxtheme.dll").as_ptr());
-        if lib.is_null() {
-            return;
-        }
-        UX_THEME = Some(lib);
-
-        // Windows 10 1903+: SetPreferredAppMode is ordinal 135.
-        if let Some(proc) = GetProcAddress(lib, 135usize as *const u8) {
-            let set_mode: SetPreferredAppModeFn = std::mem::transmute(proc);
-            set_mode(APP_MODE_ALLOW_DARK);
-        }
-
-        // RefreshImmersiveColorPolicyState (ordinal 104).
-        if let Some(proc) = GetProcAddress(lib, 104usize as *const u8) {
-            let refresh: RefreshImmersiveColorPolicyStateFn = std::mem::transmute(proc);
-            refresh();
-        }
-
-        // FlushMenuThemes (ordinal 136).
-        if let Some(proc) = GetProcAddress(lib, 136usize as *const u8) {
-            let flush: FlushMenuThemesFn = std::mem::transmute(proc);
-            flush();
-        }
-
-        // AllowDarkModeForWindow (ordinal 133).
-        if let Some(proc) = GetProcAddress(lib, 133usize as *const u8) {
-            ALLOW_DARK_FOR_WINDOW = Some(std::mem::transmute(proc));
-        }
-
-        if let Some(proc) = GetProcAddress(lib, b"SetWindowTheme\0".as_ptr()) {
-            SET_WINDOW_THEME = Some(std::mem::transmute(proc));
-        }
     }
 }
 
-unsafe extern "system" fn cbt_hook(
-    n_code: i32,
-    wparam: WPARAM,
-    lparam: LPARAM,
-) -> LRESULT {
-    unsafe {
-        if n_code == HCBT_CREATEWND {
-            let hwnd = wparam as HWND;
-            let mut class_name = [0u16; 16];
-            let length = GetClassNameW(hwnd, class_name.as_mut_ptr(), class_name.len() as i32);
-            if length == 6 && class_name[..6] == ['#' as u16, '3' as u16, '2' as u16,
-                '7' as u16, '6' as u16, '8' as u16]
-            {
-                if let Some(allow_dark) = ALLOW_DARK_FOR_WINDOW {
-                    allow_dark(hwnd, 1);
-                }
-                if let Some(set_theme) = SET_WINDOW_THEME {
-                    let theme = encode_wide("DarkMode_Explorer");
-                    // The third argument is a sub-ID list; NULL lets Windows
-                    // choose the default sub-ID list for this theme.
-                    set_theme(hwnd, theme.as_ptr(), null_mut());
-                }
-            }
+/// DWM accent color as an 0xAARRGGBB DWORD, converted to a COLORREF and
+/// cached after the first read. Falls back to the Windows blue accent.
+fn accent_color() -> windows_sys::Win32::Foundation::COLORREF {
+    static ACCENT: std::sync::OnceLock<u32> = std::sync::OnceLock::new();
+    let value = *ACCENT.get_or_init(|| unsafe {
+        let key = encode_wide("Software\\Microsoft\\Windows\\DWM");
+        let name = encode_wide("AccentColor");
+        let mut hkey = null_mut();
+        if RegOpenKeyExW(HKEY_CURRENT_USER, key.as_ptr(), 0, KEY_READ, &mut hkey) != 0 {
+            return 0xff_00_78_d7;
         }
-        CallNextHookEx(null_mut(), n_code, wparam, lparam)
-    }
+        let mut value = 0u32;
+        let mut value_type = 0u32;
+        let mut size = std::mem::size_of::<u32>() as u32;
+        let result = RegQueryValueExW(
+            hkey,
+            name.as_ptr(),
+            null_mut(),
+            &mut value_type,
+            (&mut value as *mut u32).cast(),
+            &mut size,
+        );
+        RegCloseKey(hkey);
+        if result != 0 || value_type != REG_DWORD {
+            0xff_00_78_d7
+        } else {
+            value
+        }
+    });
+    value & 0x00ff_ffff
 }
-
 struct TrayWindow {
     hwnd: HWND,
     app_state: AppState,
@@ -199,7 +148,11 @@ struct TrayWindow {
 static mut GLOBAL_WINDOW: Option<*mut TrayWindow> = None;
 
 fn set_tooltip(nid: &mut NOTIFYICONDATAW, text: &str) {
-    for (index, code_unit) in text.encode_utf16().take(nid.szTip.len().saturating_sub(1)).enumerate() {
+    for (index, code_unit) in text
+        .encode_utf16()
+        .take(nid.szTip.len().saturating_sub(1))
+        .enumerate()
+    {
         nid.szTip[index] = code_unit;
     }
 }
@@ -301,7 +254,10 @@ impl TrayWindow {
 
         if self.app_state.tick() {
             let _ = set_keep_awake(false);
-            unsafe { KillTimer(self.hwnd, TIMER_ID_SECOND); }
+            unsafe {
+                KillTimer(self.hwnd, TIMER_ID_SECOND);
+            }
+            self.show_balloon("Keep-awake timer finished. Caffeine is now Off.");
         }
         self.update_tray();
     }
@@ -309,118 +265,97 @@ impl TrayWindow {
     fn show_context_menu(&mut self) {
         unsafe {
             // Ask Explorer for the actual screen rectangle of our notification
-            // icon. This remains correct when the taskbar is moved or the display
+            // icon. This stays correct when the taskbar moves or the display
             // layout changes; the cursor position is only a fallback.
-            let mut point = POINT { x: 0, y: 0 };
-            let mut menu_flags = TPM_RIGHTBUTTON | TPM_LEFTALIGN | TPM_BOTTOMALIGN;
-
             let identifier = NOTIFYICONIDENTIFIER {
                 cbSize: std::mem::size_of::<NOTIFYICONIDENTIFIER>() as u32,
                 hWnd: self.hwnd,
                 uID: 1,
                 guidItem: std::mem::zeroed(),
             };
-            let mut icon_rect = RECT {
+            let mut anchor = RECT {
                 left: 0,
                 top: 0,
                 right: 0,
                 bottom: 0,
             };
-
-            if Shell_NotifyIconGetRect(&identifier, &mut icon_rect) == 0 {
-                // Align the menu's right edge with the tray icon's right edge,
-                // and its bottom edge with the icon's top edge. This gives the
-                // familiar "menu grows upward from the tray icon" placement.
-                point.x = icon_rect.right;
-                point.y = icon_rect.top;
-                menu_flags = TPM_RIGHTBUTTON | TPM_RIGHTALIGN | TPM_BOTTOMALIGN;
-            } else {
+            if Shell_NotifyIconGetRect(&identifier, &mut anchor) != 0 {
+                let mut point = POINT { x: 0, y: 0 };
                 GetCursorPos(&mut point);
-            }
-
-            let menu: HMENU = CreatePopupMenu();
-            if menu.is_null() {
-                return;
-            }
-
-            let toggle_label = if self.app_state.current_mode.is_active() {
-                "Deactivate (Turn Off)"
-            } else {
-                "Activate (15 min)"
-            };
-            let toggle_wide = encode_wide(toggle_label);
-            AppendMenuW(menu, MF_STRING, CMD_TOGGLE, toggle_wide.as_ptr());
-            AppendMenuW(menu, MF_SEPARATOR, 0, null_mut());
-
-            let durations = [
-                ("15 Minutes", CMD_15M, TimerDuration::Minutes(15)),
-                ("30 Minutes", CMD_30M, TimerDuration::Minutes(30)),
-                ("1 Hour", CMD_1H, TimerDuration::Hours(1)),
-                ("2 Hours", CMD_2H, TimerDuration::Hours(2)),
-                ("4 Hours", CMD_4H, TimerDuration::Hours(4)),
-                ("Indefinite (Always Awake)", CMD_INFINITE, TimerDuration::Infinite),
-            ];
-
-            for (label, command, mode) in durations {
-                let wide = encode_wide(label);
-                let flags = if self.app_state.current_mode == mode {
-                    MF_STRING | MF_CHECKED
-                } else {
-                    MF_STRING | MF_UNCHECKED
+                anchor = RECT {
+                    left: point.x,
+                    top: point.y,
+                    right: point.x,
+                    bottom: point.y,
                 };
-                AppendMenuW(menu, flags, command, wide.as_ptr());
             }
 
-            AppendMenuW(menu, MF_SEPARATOR, 0, null_mut());
+            let active = self.app_state.current_mode.is_active();
+            let mut rows = vec![
+                MenuEntry::header(&format!("☕ {}", self.app_state.status_label())),
+                MenuEntry::item(
+                    if active {
+                        "⏻ Deactivate"
+                    } else {
+                        "⏻ Activate"
+                    },
+                    CMD_TOGGLE,
+                    active,
+                ),
+            ];
+            let durations = [
+                ("◷ 15 min", CMD_15M, TimerDuration::Minutes(15)),
+                ("◷ 30 min", CMD_30M, TimerDuration::Minutes(30)),
+                ("◷ 1 h", CMD_1H, TimerDuration::Hours(1)),
+                ("◷ 2 h", CMD_2H, TimerDuration::Hours(2)),
+                ("◷ 4 h", CMD_4H, TimerDuration::Hours(4)),
+                ("∞ Always awake", CMD_INFINITE, TimerDuration::Infinite),
+            ];
+            for (label, command, mode) in durations {
+                rows.push(MenuEntry::radio_item(
+                    label,
+                    command,
+                    self.app_state.current_mode == mode,
+                ));
+            }
+            rows.push(MenuEntry::item(
+                "↻ Auto reset on activity",
+                CMD_AUTO_RESET,
+                self.auto_reset_on_activity,
+            ));
+            rows.push(MenuEntry::item(
+                "⌂ Start with Windows",
+                CMD_AUTOSTART,
+                caffeine_win::autostart::is_autostart_enabled(),
+            ));
+            rows.push(MenuEntry::item("✕ Exit", CMD_EXIT, false));
 
-            let reset_flags = if self.auto_reset_on_activity {
-                MF_STRING | MF_CHECKED
-            } else {
-                MF_STRING | MF_UNCHECKED
-            };
-            let reset_label = encode_wide("Auto Reset on Activity (Mouse + Keyboard)");
-            AppendMenuW(menu, reset_flags, CMD_AUTO_RESET, reset_label.as_ptr());
-
-            let auto_flags = if caffeine_win::autostart::is_autostart_enabled() {
-                MF_STRING | MF_CHECKED
-            } else {
-                MF_STRING | MF_UNCHECKED
-            };
-            let auto_label = encode_wide("Start with Windows");
-            AppendMenuW(menu, auto_flags, CMD_AUTOSTART, auto_label.as_ptr());
-            AppendMenuW(menu, MF_SEPARATOR, 0, null_mut());
-            let exit_label = encode_wide("Exit");
-            AppendMenuW(menu, MF_STRING, CMD_EXIT, exit_label.as_ptr());
-
-            SetForegroundWindow(self.hwnd);
-            let hook = if SYSTEM_DARK {
-                SetWindowsHookExW(
-                    WH_CBT,
-                    Some(cbt_hook),
-                    GetModuleHandleW(null_mut()),
-                    GetCurrentThreadId(),
-                )
-            } else {
-                null_mut()
-            };
-
-            TrackPopupMenu(
-                menu,
-                menu_flags,
-                point.x,
-                point.y,
-                0,
+            caffeine_win::menu::show_tray_menu(
                 self.hwnd,
-                null_mut(),
+                rows,
+                anchor,
+                SYSTEM_DARK,
+                accent_color(),
             );
-
-            if !hook.is_null() {
-                UnhookWindowsHookEx(hook);
+        }
+    }
+    /// Balloon tip; used when the keep-awake timer runs out.
+    fn show_balloon(&self, info: &str) {
+        unsafe {
+            let mut nid = self.make_notify_data(NIF_INFO | NIF_TIP, self.current_icon);
+            for (index, unit) in info.encode_utf16().take(nid.szInfo.len()).enumerate() {
+                nid.szInfo[index] = unit;
             }
-            DestroyMenu(menu);
-            // Required by the shell/Win32 popup-menu pattern to ensure the
-            // foreground window receives the menu-dismissal notification.
-            PostMessageW(self.hwnd, 0x0000, 0, 0); // WM_NULL
+            for (index, unit) in "Caffeine"
+                .encode_utf16()
+                .take(nid.szInfoTitle.len())
+                .enumerate()
+            {
+                nid.szInfoTitle[index] = unit;
+            }
+            nid.dwInfoFlags = NIIF_INFO;
+            nid.Anonymous.uTimeout = 5000;
+            let _ = Shell_NotifyIconW(NIM_MODIFY, &nid);
         }
     }
 
@@ -484,6 +419,19 @@ unsafe extern "system" fn window_proc(
                             tray.toggle_auto_reset();
                         }
                         CMD_EXIT => {
+                            if tray.app_state.current_mode.is_active()
+                                && MessageBoxW(
+                                    hwnd,
+                                    encode_wide(
+                                        "A keep-awake timer is still running.\nExit and stop keeping the PC awake?",
+                                    )
+                                    .as_ptr(),
+                                    encode_wide("Caffeine").as_ptr(),
+                                    MB_YESNO | MB_ICONQUESTION | MB_SETFOREGROUND,
+                                ) != IDYES
+                            {
+                                return 0;
+                            }
                             let _ = set_keep_awake(false);
                             PostQuitMessage(0);
                         }
@@ -515,7 +463,8 @@ fn main() {
     unsafe {
         let instance = GetModuleHandleW(null_mut());
         let class_name = encode_wide("CaffeineTrayWindowClass");
-        let taskbar_created_message = RegisterWindowMessageW(encode_wide("TaskbarCreated").as_ptr());
+        let taskbar_created_message =
+            RegisterWindowMessageW(encode_wide("TaskbarCreated").as_ptr());
 
         let window_class = windows_sys::Win32::UI::WindowsAndMessaging::WNDCLASSW {
             style: 0,
@@ -539,7 +488,10 @@ fn main() {
             class_name.as_ptr(),
             encode_wide("Caffeine").as_ptr(),
             0,
-            0, 0, 0, 0,
+            0,
+            0,
+            0,
+            0,
             null_mut(),
             null_mut(),
             instance,
@@ -581,7 +533,8 @@ fn main() {
             DispatchMessageW(&msg);
         }
 
-        let nid = tray_window.make_notify_data(NIF_MESSAGE | NIF_ICON | NIF_TIP, tray_window.current_icon);
+        let nid = tray_window
+            .make_notify_data(NIF_MESSAGE | NIF_ICON | NIF_TIP, tray_window.current_icon);
         Shell_NotifyIconW(NIM_DELETE, &nid);
         let _ = set_keep_awake(false);
         GLOBAL_WINDOW = None;

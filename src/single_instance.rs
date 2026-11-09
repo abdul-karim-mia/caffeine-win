@@ -1,4 +1,4 @@
-use windows_sys::Win32::Foundation::{CloseHandle, GetLastError, ERROR_ALREADY_EXISTS, HANDLE};
+use windows_sys::Win32::Foundation::{CloseHandle, ERROR_ALREADY_EXISTS, GetLastError, HANDLE};
 use windows_sys::Win32::System::Threading::CreateMutexW;
 
 pub struct SingleInstance {

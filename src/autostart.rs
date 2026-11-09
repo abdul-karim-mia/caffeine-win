@@ -1,8 +1,8 @@
 use std::env;
 use windows_sys::Win32::Foundation::{ERROR_FILE_NOT_FOUND, ERROR_PATH_NOT_FOUND};
 use windows_sys::Win32::System::Registry::{
-    RegCloseKey, RegDeleteValueW, RegOpenKeyExW, RegQueryValueExW, RegSetValueExW,
-    HKEY_CURRENT_USER, KEY_READ, KEY_SET_VALUE, REG_SZ,
+    HKEY_CURRENT_USER, KEY_READ, KEY_SET_VALUE, REG_SZ, RegCloseKey, RegDeleteValueW,
+    RegOpenKeyExW, RegQueryValueExW, RegSetValueExW,
 };
 
 const RUN_KEY: &str = "Software\\Microsoft\\Windows\\CurrentVersion\\Run";
@@ -19,14 +19,7 @@ pub fn is_autostart_enabled() -> bool {
     let mut hkey = std::ptr::null_mut();
 
     unsafe {
-        if RegOpenKeyExW(
-            HKEY_CURRENT_USER,
-            key_wide.as_ptr(),
-            0,
-            KEY_READ,
-            &mut hkey,
-        ) != 0
-        {
+        if RegOpenKeyExW(HKEY_CURRENT_USER, key_wide.as_ptr(), 0, KEY_READ, &mut hkey) != 0 {
             return false;
         }
 

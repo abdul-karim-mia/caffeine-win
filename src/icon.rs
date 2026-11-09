@@ -3,8 +3,8 @@ use std::f32::consts::PI;
 use windows_sys::Win32::Foundation::COLORREF;
 use windows_sys::Win32::Graphics::Gdi::{
     CreateBitmap, CreateCompatibleBitmap, CreateCompatibleDC, CreatePen, CreateSolidBrush,
-    DeleteDC, DeleteObject, Ellipse, GetDC, LineTo, MoveToEx, Pie, ReleaseDC, SelectObject,
-    HGDIOBJ, PS_SOLID,
+    DeleteDC, DeleteObject, Ellipse, GetDC, HGDIOBJ, LineTo, MoveToEx, PS_SOLID, Pie, ReleaseDC,
+    SelectObject,
 };
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     CreateIconIndirect, DestroyIcon, HICON, ICONINFO,
@@ -17,8 +17,12 @@ pub fn rgb(r: u8, g: u8, b: u8) -> COLORREF {
     (r as u32) | ((g as u32) << 8) | ((b as u32) << 16)
 }
 
-unsafe fn select_pen(dc: windows_sys::Win32::Graphics::Gdi::HDC, color: COLORREF, width: i32,
-                     objects: &mut Vec<HGDIOBJ>) {
+unsafe fn select_pen(
+    dc: windows_sys::Win32::Graphics::Gdi::HDC,
+    color: COLORREF,
+    width: i32,
+    objects: &mut Vec<HGDIOBJ>,
+) {
     let pen = CreatePen(PS_SOLID, width, color);
     if !pen.is_null() {
         objects.push(pen as HGDIOBJ);
@@ -26,8 +30,11 @@ unsafe fn select_pen(dc: windows_sys::Win32::Graphics::Gdi::HDC, color: COLORREF
     }
 }
 
-unsafe fn select_brush(dc: windows_sys::Win32::Graphics::Gdi::HDC, color: COLORREF,
-                       objects: &mut Vec<HGDIOBJ>) {
+unsafe fn select_brush(
+    dc: windows_sys::Win32::Graphics::Gdi::HDC,
+    color: COLORREF,
+    objects: &mut Vec<HGDIOBJ>,
+) {
     let brush = CreateSolidBrush(color);
     if !brush.is_null() {
         objects.push(brush as HGDIOBJ);
@@ -49,9 +56,15 @@ pub fn create_tray_icon(is_active: bool, is_infinite: bool, progress: f32) -> HI
         let mask_bmp = CreateBitmap(ICON_SIZE, ICON_SIZE, 1, 1, std::ptr::null());
 
         if mem_dc.is_null() || color_bmp.is_null() || mask_bmp.is_null() {
-            if !mem_dc.is_null() { DeleteDC(mem_dc); }
-            if !color_bmp.is_null() { DeleteObject(color_bmp as HGDIOBJ); }
-            if !mask_bmp.is_null() { DeleteObject(mask_bmp as HGDIOBJ); }
+            if !mem_dc.is_null() {
+                DeleteDC(mem_dc);
+            }
+            if !color_bmp.is_null() {
+                DeleteObject(color_bmp as HGDIOBJ);
+            }
+            if !mask_bmp.is_null() {
+                DeleteObject(mask_bmp as HGDIOBJ);
+            }
             ReleaseDC(std::ptr::null_mut(), screen_dc);
             return std::ptr::null_mut();
         }
@@ -64,8 +77,12 @@ pub fn create_tray_icon(is_active: bool, is_infinite: bool, progress: f32) -> HI
         let initial_brush = CreateSolidBrush(rgb(0, 0, 0));
         let initial_pen = CreatePen(PS_SOLID, 1, rgb(0, 0, 0));
         if initial_brush.is_null() || initial_pen.is_null() {
-            if !initial_brush.is_null() { DeleteObject(initial_brush as HGDIOBJ); }
-            if !initial_pen.is_null() { DeleteObject(initial_pen as HGDIOBJ); }
+            if !initial_brush.is_null() {
+                DeleteObject(initial_brush as HGDIOBJ);
+            }
+            if !initial_pen.is_null() {
+                DeleteObject(initial_pen as HGDIOBJ);
+            }
             SelectObject(mem_dc, old_bmp);
             DeleteDC(mem_dc);
             ReleaseDC(std::ptr::null_mut(), screen_dc);
@@ -77,9 +94,7 @@ pub fn create_tray_icon(is_active: bool, is_infinite: bool, progress: f32) -> HI
         let original_pen = SelectObject(mem_dc, initial_pen as HGDIOBJ);
         objects.push(initial_brush as HGDIOBJ);
         objects.push(initial_pen as HGDIOBJ);
-        windows_sys::Win32::Graphics::Gdi::Rectangle(
-            mem_dc, 0, 0, ICON_SIZE + 1, ICON_SIZE + 1,
-        );
+        windows_sys::Win32::Graphics::Gdi::Rectangle(mem_dc, 0, 0, ICON_SIZE + 1, ICON_SIZE + 1);
 
         let center = ICON_SIZE / 2;
         let radius = center - 3;
@@ -155,9 +170,15 @@ pub fn create_tray_icon(is_active: bool, is_infinite: bool, progress: f32) -> HI
         let no_pen = CreatePen(PS_SOLID, 1, rgb(0, 0, 0));
 
         if white_brush.is_null() || black_brush.is_null() || no_pen.is_null() {
-            if !white_brush.is_null() { DeleteObject(white_brush as HGDIOBJ); }
-            if !black_brush.is_null() { DeleteObject(black_brush as HGDIOBJ); }
-            if !no_pen.is_null() { DeleteObject(no_pen as HGDIOBJ); }
+            if !white_brush.is_null() {
+                DeleteObject(white_brush as HGDIOBJ);
+            }
+            if !black_brush.is_null() {
+                DeleteObject(black_brush as HGDIOBJ);
+            }
+            if !no_pen.is_null() {
+                DeleteObject(no_pen as HGDIOBJ);
+            }
             SelectObject(mask_dc, old_mask_bmp);
             DeleteDC(mask_dc);
             DeleteObject(color_bmp as HGDIOBJ);
@@ -167,9 +188,7 @@ pub fn create_tray_icon(is_active: bool, is_infinite: bool, progress: f32) -> HI
 
         let original_mask_brush = SelectObject(mask_dc, white_brush as HGDIOBJ);
         let original_mask_pen = SelectObject(mask_dc, no_pen as HGDIOBJ);
-        windows_sys::Win32::Graphics::Gdi::Rectangle(
-            mask_dc, 0, 0, ICON_SIZE + 1, ICON_SIZE + 1,
-        );
+        windows_sys::Win32::Graphics::Gdi::Rectangle(mask_dc, 0, 0, ICON_SIZE + 1, ICON_SIZE + 1);
 
         SelectObject(mask_dc, black_brush as HGDIOBJ);
         Ellipse(mask_dc, left, top, right, bottom);
@@ -200,6 +219,8 @@ pub fn create_tray_icon(is_active: bool, is_infinite: bool, progress: f32) -> HI
 
 pub fn destroy_tray_icon(hicon: HICON) {
     if !hicon.is_null() {
-        unsafe { DestroyIcon(hicon); }
+        unsafe {
+            DestroyIcon(hicon);
+        }
     }
 }

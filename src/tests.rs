@@ -1,4 +1,24 @@
-use crate::state::{AppState, TimerDuration};
+use crate::state::{AppState, TimerDuration, format_hms};
+
+#[test]
+fn test_format_hms() {
+    assert_eq!(format_hms(0), "0:00");
+    assert_eq!(format_hms(9), "0:09");
+    assert_eq!(format_hms(65), "1:05");
+    assert_eq!(format_hms(3599), "59:59");
+    assert_eq!(format_hms(3661), "1:01:01");
+}
+
+#[test]
+fn test_status_label() {
+    let mut state = AppState::new();
+    assert_eq!(state.status_label(), "Off");
+    state.set_mode(TimerDuration::Minutes(15));
+    state.remaining_seconds = 3600 + 65;
+    assert_eq!(state.status_label(), "Awake — 1:01:05 left");
+    state.set_mode(TimerDuration::Infinite);
+    assert_eq!(state.status_label(), "Awake — always on");
+}
 
 #[test]
 fn test_timer_cycle_sequence() {
@@ -68,7 +88,6 @@ fn test_zero_duration_is_normalized_to_off() {
     state.set_mode(TimerDuration::Hours(0));
     assert_eq!(state.current_mode, TimerDuration::Off);
 }
-
 
 #[test]
 fn test_reset_countdown_restores_full_duration() {
