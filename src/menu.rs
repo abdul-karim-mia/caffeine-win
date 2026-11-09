@@ -1,16 +1,18 @@
 //! Custom system-tray popup menu.
 //!
 //! Replaces the classic `TrackPopupMenu` HMENU with an owner-drawn popup
-//! window so we can apply an acrylic blur (`SetWindowCompositionAttribute`,
-//! undocumented, same technique Twinkle Tray uses in `acrylic.cc`) and a
-//! slide-up animation. Commands are still dispatched to the parent window as
-//! `WM_COMMAND`, keeping the existing command IDs.
+//! window so the menu can carry the Windows 11 Mica backdrop
+//! (`DwmSetWindowAttribute`, documented) plus a slide-up animation. Older
+//! builds fall back to acrylic blur (`SetWindowCompositionAttribute`,
+//! undocumented, same technique Twinkle Tray uses in `acrylic.cc`). Commands
+//! are still dispatched to the parent window as `WM_COMMAND`, keeping the
+//! existing command IDs.
 
 use std::ptr::null_mut;
 use windows_sys::Win32::Foundation::{COLORREF, HWND, LPARAM, LRESULT, RECT, SIZE, WPARAM};
 use windows_sys::Win32::Graphics::Dwm::{
     DWMWA_USE_IMMERSIVE_DARK_MODE, DWMWA_WINDOW_CORNER_PREFERENCE, DWMWCP_ROUND,
-    DwmSetWindowAttribute,
+    DwmExtendFrameIntoClientArea, DwmSetWindowAttribute,
 };
 use windows_sys::Win32::Graphics::Gdi::{
     BeginPaint, BitBlt, CreateCompatibleBitmap, CreateCompatibleDC, CreateFontW, CreateSolidBrush,
@@ -20,31 +22,30 @@ use windows_sys::Win32::Graphics::Gdi::{
     SelectObject, SetBkMode, SetTextColor, TRANSPARENT,
 };
 use windows_sys::Win32::System::LibraryLoader::{GetModuleHandleW, GetProcAddress};
+use windows_sys::Win32::UI::Controls::MARGINS;
 use windows_sys::Win32::UI::HiDpi::GetDpiForWindow;
 use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
     SetFocus, TME_LEAVE, TRACKMOUSEEVENT, TrackMouseEvent,
 };
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     CreateWindowExW, DefWindowProcW, DestroyWindow, DispatchMessageW, GetClientRect, GetMessageW,
-    GetWindowRect, HCURSOR, HWND_TOPMOST, IDC_ARROW, KillTimer, LWA_ALPHA, LoadCursorW, MSG,
-    PostMessageW, PostQuitMessage, RegisterClassW, SW_SHOWNOACTIVATE, SWP_NOACTIVATE,
-    SWP_SHOWWINDOW, SetCursor, SetForegroundWindow, SetLayeredWindowAttributes, SetTimer,
-    SetWindowPos, ShowWindow, TranslateMessage, WA_INACTIVE, WM_ACTIVATE, WM_CLOSE, WM_COMMAND,
-    WM_ERASEBKGND, WM_KEYDOWN, WM_KEYUP, WM_KILLFOCUS, WM_LBUTTONUP, WM_MOUSEMOVE, WM_NCDESTROY,
-    WM_PAINT, WM_SETCURSOR, WM_TIMER, WNDCLASSW, WS_EX_LAYERED, WS_EX_TOOLWINDOW, WS_EX_TOPMOST,
-    WS_POPUP,
+    GetWindowRect, HCURSOR, HWND_TOPMOST, IDC_ARROW, KillTimer, LoadCursorW, MSG, PostMessageW,
+    PostQuitMessage, RegisterClassW, SW_SHOWNOACTIVATE, SWP_NOACTIVATE, SWP_SHOWWINDOW, SetCursor,
+    SetForegroundWindow, SetTimer, SetWindowPos, ShowWindow, TranslateMessage, WA_INACTIVE,
+    WM_ACTIVATE, WM_CLOSE, WM_COMMAND, WM_ERASEBKGND, WM_KEYDOWN, WM_KEYUP, WM_KILLFOCUS,
+    WM_LBUTTONUP, WM_MOUSEMOVE, WM_NCDESTROY, WM_PAINT, WM_SETCURSOR, WM_TIMER, WNDCLASSW,
+    WS_EX_TOOLWINDOW, WS_EX_TOPMOST, WS_POPUP,
 };
 
 const WM_TIMER_ANIM: usize = 3101;
 
 const ANIM_DURATION_MS: u32 = 200;
 const ANIM_FRAME_MS: u32 = 15;
-// Opacity fade finishes over the first fraction of the slide, so the acrylic
-// backdrop reads correctly before the window reaches full height.
-const FADE_FRACTION: f32 = 0.35;
-// Whole-window alpha; keeps the acrylic backdrop slightly visible through the
-// content (Twinkle Tray uses #D0/#DD tints with a similar ramp).
-const FINAL_ALPHA: u32 = 214;
+
+/// Mica: the documented Windows 11 backdrop material, applied through
+/// DwmSetWindowAttribute and themed by the system (light/dark + accent).
+const DWMWA_SYSTEMBACKDROP_TYPE: u32 = 38;
+const DWMSBT_MAINWINDOW: u32 = 2;
 
 const ITEM_PADDING_X: i32 = 14;
 const CHECKBOX_WIDTH: i32 = 24;
@@ -78,6 +79,36 @@ struct WindowCompositionAttributeData {
 }
 
 const WCA_ACCENT_POLICY: i32 = 19;
+
+/// Applies the Mica material. Windows 11 22000+ only; returns false elsewhere
+/// so the caller can fall back to acrylic blur.
+fn apply_mica(hwnd: HWND, dark: bool) -> bool {
+    unsafe {
+        // The frame must cover the client area for the material to show here.
+        let margins = MARGINS {
+            cxLeftWidth: -1,
+            cxRightWidth: -1,
+            cyTopHeight: -1,
+            cyBottomHeight: -1,
+        };
+        if DwmExtendFrameIntoClientArea(hwnd, &margins) != 0 {
+            return false;
+        }
+        let backdrop: u32 = DWMSBT_MAINWINDOW;
+        if DwmSetWindowAttribute(
+            hwnd,
+            DWMWA_SYSTEMBACKDROP_TYPE,
+            &backdrop as *const u32 as *const std::ffi::c_void,
+            std::mem::size_of::<u32>() as u32,
+        ) != 0
+        {
+            return false;
+        }
+        // Mica itself is theme-aware; the dark flag only tints our own text.
+        let _ = dark;
+        true
+    }
+}
 
 fn rgb(r: u32, g: u32, b: u32) -> COLORREF {
     r | (g << 8) | (b << 16)
@@ -191,6 +222,8 @@ struct MenuWindow {
     final_size: (i32, i32),
     /// Accent tint for marks, from the DWM AccentColor registry value.
     accent: COLORREF,
+    /// True when the Windows 11 Mica material sits behind the client area.
+    mica: bool,
 }
 
 impl MenuWindow {
@@ -252,10 +285,6 @@ impl MenuWindow {
                 current_height,
                 SWP_NOACTIVATE | SWP_SHOWWINDOW,
             );
-
-            let fade = (t / FADE_FRACTION).min(1.0);
-            let alpha = (FINAL_ALPHA as f32 * fade) as u8;
-            SetLayeredWindowAttributes(self.hwnd, 0, alpha, LWA_ALPHA);
 
             if self.progress >= 1.0 {
                 KillTimer(self.hwnd, WM_TIMER_ANIM);
@@ -323,9 +352,13 @@ unsafe extern "system" fn menu_wndproc(
                 let mem_bitmap = CreateCompatibleBitmap(paint_hdc, width, height);
                 let old_bitmap = SelectObject(mem_dc, mem_bitmap);
                 let hdc = mem_dc;
-                let background = CreateSolidBrush(bg);
-                FillRect(hdc, &client, background);
-                DeleteObject(background);
+                if !menu.mica {
+                    // Opaque base for acrylic fallback; under Mica the material
+                    // itself is the background, so an opaque fill would hide it.
+                    let background = CreateSolidBrush(bg);
+                    FillRect(hdc, &client, background);
+                    DeleteObject(background);
+                }
 
                 if let Some(index) = menu.highlight {
                     let mut rect = menu.item_rects[index];
@@ -637,8 +670,10 @@ pub fn show_tray_menu(
         RegisterClassW(&class);
 
         // Created hidden at zero size; the animation grows it into place.
+        // Not layered: layered windows bypass the DWM backdrop, so Mica and
+        // acrylic would not render.
         let hwnd = CreateWindowExW(
-            (WS_EX_LAYERED | WS_EX_TOOLWINDOW | WS_EX_TOPMOST) as u32,
+            (WS_EX_TOOLWINDOW | WS_EX_TOPMOST) as u32,
             class_name.as_ptr(),
             encode("Caffeine Menu").as_ptr(),
             WS_POPUP,
@@ -677,7 +712,11 @@ pub fn show_tray_menu(
             );
         }
 
-        apply_acrylic(hwnd, dark);
+        // Mica on Windows 11; acrylic blur on anything older.
+        let mica = apply_mica(hwnd, dark);
+        if !mica {
+            apply_acrylic(hwnd, dark);
+        }
 
         let scale = GetDpiForWindow(hwnd) as f32 / 96.0;
         let make_font = |face: &str| -> HFONT {
@@ -734,6 +773,7 @@ pub fn show_tray_menu(
             scale,
             final_size: (0, 0),
             accent,
+            mica,
         });
 
         // Width from the longest label.
@@ -803,10 +843,6 @@ pub fn show_tray_menu(
             }
         };
         let (x, y) = menu_position(anchor, work, width, height);
-
-        // Start fully invisible; the first animation frame resets the alpha.
-        SetLayeredWindowAttributes(hwnd, 0, 0, LWA_ALPHA);
-
         MENU_WINDOW = Box::into_raw(menu);
 
         SetWindowPos(hwnd, HWND_TOPMOST, x, y + height, width, 0, SWP_NOACTIVATE);
