@@ -12,30 +12,29 @@ use std::ptr::null_mut;
 use windows_sys::Win32::Foundation::{COLORREF, HWND, LPARAM, LRESULT, RECT, SIZE, WPARAM};
 use windows_sys::Win32::Graphics::Dwm::{
     DWMWA_USE_IMMERSIVE_DARK_MODE, DWMWA_WINDOW_CORNER_PREFERENCE, DWMWCP_ROUND,
-    DwmExtendFrameIntoClientArea, DwmSetWindowAttribute,
+    DwmSetWindowAttribute,
 };
 use windows_sys::Win32::Graphics::Gdi::{
     BeginPaint, BitBlt, CreateCompatibleBitmap, CreateCompatibleDC, CreateFontW, CreateSolidBrush,
     DT_CENTER, DT_LEFT, DT_SINGLELINE, DT_VCENTER, DeleteDC, DeleteObject, DrawTextW, EndPaint,
-    FW_NORMAL, FillRect, GetMonitorInfoW, GetTextExtentPoint32W, HBRUSH, HDC, HFONT,
+    FW_NORMAL, FillRect, GetMonitorInfoW, GetTextExtentPoint32W, HBRUSH, HDC, HFONT, HRGN,
     InvalidateRect, MONITOR_DEFAULTTONEAREST, MONITORINFO, MonitorFromRect, PAINTSTRUCT, SRCCOPY,
     SelectObject, SetBkMode, SetTextColor, TRANSPARENT,
 };
-use windows_sys::Win32::System::LibraryLoader::{GetModuleHandleW, GetProcAddress};
-use windows_sys::Win32::UI::Controls::MARGINS;
+use windows_sys::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows_sys::Win32::UI::HiDpi::GetDpiForWindow;
 use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
     SetFocus, TME_LEAVE, TRACKMOUSEEVENT, TrackMouseEvent,
 };
 use windows_sys::Win32::UI::WindowsAndMessaging::{
-    CreateWindowExW, DefWindowProcW, DestroyWindow, DispatchMessageW, GetClientRect, GetMessageW,
-    GetWindowRect, HCURSOR, HWND_TOPMOST, IDC_ARROW, KillTimer, LWA_ALPHA, LoadCursorW, MSG,
-    PostMessageW, PostQuitMessage, RegisterClassW, SW_SHOWNOACTIVATE, SWP_NOACTIVATE,
-    SWP_SHOWWINDOW, SetCursor, SetForegroundWindow, SetLayeredWindowAttributes, SetTimer,
-    SetWindowPos, ShowWindow, TranslateMessage, WA_INACTIVE, WM_ACTIVATE, WM_CLOSE, WM_COMMAND,
-    WM_ERASEBKGND, WM_KEYDOWN, WM_KEYUP, WM_KILLFOCUS, WM_LBUTTONUP, WM_MOUSEMOVE, WM_NCDESTROY,
-    WM_PAINT, WM_SETCURSOR, WM_TIMER, WNDCLASSW, WS_EX_LAYERED, WS_EX_TOOLWINDOW, WS_EX_TOPMOST,
-    WS_POPUP,
+    CS_DROPSHADOW, CreateWindowExW, DefWindowProcW, DestroyWindow, DispatchMessageW, GetClientRect,
+    GetMessageW, GetWindowRect, HCURSOR, HWND_TOPMOST, IDC_ARROW, KillTimer, LWA_ALPHA,
+    LoadCursorW, MSG, PostMessageW, PostQuitMessage, RegisterClassW, SW_SHOWNOACTIVATE,
+    SWP_NOACTIVATE, SWP_SHOWWINDOW, SetCursor, SetForegroundWindow, SetLayeredWindowAttributes,
+    SetTimer, SetWindowPos, ShowWindow, TranslateMessage, WA_INACTIVE, WM_ACTIVATE, WM_CLOSE,
+    WM_COMMAND, WM_ERASEBKGND, WM_KEYDOWN, WM_KEYUP, WM_KILLFOCUS, WM_LBUTTONUP, WM_MOUSEMOVE,
+    WM_NCDESTROY, WM_PAINT, WM_SETCURSOR, WM_TIMER, WNDCLASSW, WS_EX_LAYERED, WS_EX_TOOLWINDOW,
+    WS_EX_TOPMOST, WS_POPUP,
 };
 
 const WM_TIMER_ANIM: usize = 3101;
@@ -56,12 +55,8 @@ const PILL_EASE: f32 = 0.4;
 const PILL_INSET_X: i32 = 4;
 const PILL_INSET_Y: i32 = 1;
 
-/// Mica: the documented Windows 11 backdrop material, applied through
-/// DwmSetWindowAttribute and themed by the system (light/dark + accent).
-/// Transient is the variant Explorer uses for context menus and popups: it is
-/// more transparent than the main-window material.
-const DWMWA_SYSTEMBACKDROP_TYPE: u32 = 38;
-const DWMSBT_TRANSIENTWINDOW: u32 = 4;
+// The tinted blur-behind policy that gives the menu its solid fill; the
+// alpha carries the full window opacity (see FINAL_ALPHA).
 
 const ITEM_PADDING_X: i32 = 12;
 const CHECKBOX_WIDTH: i32 = 18;
@@ -79,62 +74,6 @@ pub const ICON_REFRESH: u16 = 0xE72C;
 pub const ICON_HOME: u16 = 0xE80F;
 pub const ICON_EXIT: u16 = 0xE711;
 pub const ICON_MORE: u16 = 0xE712;
-
-#[repr(i32)]
-enum AccentState {
-    #[allow(dead_code)]
-    Disabled = 0,
-    AcrylicBlurBehind = 4,
-}
-
-// Undocumented DWM composition structures, mirrored from Twinkle Tray's
-// src/modules/acrylic/acrylic.cc.
-#[repr(C)]
-struct AccentPolicy {
-    accent_state: AccentState,
-    accent_flags: i32,
-    gradient_color: i32,
-    animation_id: i32,
-}
-
-#[repr(C)]
-struct WindowCompositionAttributeData {
-    attribute: i32,
-    data: *mut std::ffi::c_void,
-    size: u32,
-}
-
-const WCA_ACCENT_POLICY: i32 = 19;
-
-/// Applies the Mica material. Windows 11 22000+ only; returns false elsewhere
-/// so the caller can fall back to acrylic blur.
-fn apply_mica(hwnd: HWND, dark: bool) -> bool {
-    unsafe {
-        // The frame must cover the client area for the material to show here.
-        let margins = MARGINS {
-            cxLeftWidth: -1,
-            cxRightWidth: -1,
-            cyTopHeight: -1,
-            cyBottomHeight: -1,
-        };
-        if DwmExtendFrameIntoClientArea(hwnd, &margins) != 0 {
-            return false;
-        }
-        let backdrop: u32 = DWMSBT_TRANSIENTWINDOW;
-        if DwmSetWindowAttribute(
-            hwnd,
-            DWMWA_SYSTEMBACKDROP_TYPE,
-            &backdrop as *const u32 as *const std::ffi::c_void,
-            std::mem::size_of::<u32>() as u32,
-        ) != 0
-        {
-            return false;
-        }
-        // Mica itself is theme-aware; the dark flag only tints our own text.
-        let _ = dark;
-        true
-    }
-}
 
 fn rgb(r: u32, g: u32, b: u32) -> COLORREF {
     r | (g << 8) | (b << 16)
@@ -400,6 +339,10 @@ impl MenuWindow {
 
             if self.progress >= 1.0 {
                 KillTimer(self.hwnd, WM_TIMER_ANIM);
+                // Repaint the whole client at the final geometry: the growth
+                // animation leaves rows and border clipped to their last
+                // frame positions.
+                InvalidateRect(self.hwnd, null_mut(), 0);
             }
         }
     }
@@ -511,6 +454,45 @@ unsafe extern "system" fn menu_wndproc(
                     FillRect(hdc, &client, background);
                     DeleteObject(background);
                 }
+
+                // 1px border in the theme's line color, like Explorer's menus.
+                // The open animation grows the window upward out of the tray,
+                // so the border is laid out in final coordinates: drawing it at
+                // the current window edges leaves one stripe per animation
+                // frame, which never clears.
+                let final_height = menu.final_size.1;
+                let top = final_height - height;
+                let border = CreateSolidBrush(line_color);
+                let edges = [
+                    RECT {
+                        left: 0,
+                        top,
+                        right: width,
+                        bottom: top + 1,
+                    },
+                    RECT {
+                        left: 0,
+                        top: final_height - 1,
+                        right: width,
+                        bottom: final_height,
+                    },
+                    RECT {
+                        left: 0,
+                        top,
+                        right: 1,
+                        bottom: final_height,
+                    },
+                    RECT {
+                        left: width - 1,
+                        top,
+                        right: width,
+                        bottom: final_height,
+                    },
+                ];
+                for edge in edges {
+                    FillRect(hdc, &edge, border);
+                }
+                DeleteObject(border);
 
                 // Hover pill: blended between the background and the hover
                 // color by its animated opacity, so it eases in, moves, and
@@ -790,43 +772,6 @@ unsafe extern "system" fn menu_wndproc(
     }
 }
 
-/// Applies the Twinkle Tray acrylic backdrop to the menu window. Returns
-/// Applies the acrylic backdrop. Returns false when the composition API is
-/// missing so Mica can be tried instead.
-fn apply_acrylic(hwnd: HWND, dark: bool) -> bool {
-    unsafe {
-        let user32 = GetModuleHandleW(encode("user32.dll").as_ptr());
-        if user32.is_null() {
-            return false;
-        }
-        let Some(proc) = GetProcAddress(user32, b"SetWindowCompositionAttribute\0".as_ptr()) else {
-            return false;
-        };
-        type SetWindowCompositionAttributeFn =
-            unsafe extern "system" fn(HWND, *const WindowCompositionAttributeData) -> i32;
-        let set_composition: SetWindowCompositionAttributeFn = std::mem::transmute(proc);
-
-        // Opaque tint: the blur behind is still computed but alpha 0xFF hides
-        // it, so the menu reads as a solid Windows context-menu panel.
-        let (r, g, b) = if dark { (41, 41, 41) } else { (219, 219, 219) };
-        let policy = AccentPolicy {
-            accent_state: AccentState::AcrylicBlurBehind,
-            accent_flags: 2,
-            gradient_color: ((0xFFu32 << 24) | ((b as u32) << 16) | ((g as u32) << 8) | r as u32)
-                as i32,
-            animation_id: 0,
-        };
-        let data = WindowCompositionAttributeData {
-            attribute: WCA_ACCENT_POLICY,
-            data: &policy as *const AccentPolicy as *mut std::ffi::c_void,
-            size: std::mem::size_of::<AccentPolicy>() as u32,
-        };
-        // Reports success as an HRESULT (S_OK is 0), the documented shape of
-        // this undocumented API.
-        set_composition(hwnd, &data) == 0
-    }
-}
-
 /// Menu position: above the icon when it fits, otherwise below, clamped to
 /// the monitor work area so multi-monitor setups never clip it.
 fn menu_position(anchor: RECT, work: RECT, width: i32, height: i32) -> (i32, i32) {
@@ -865,7 +810,9 @@ pub fn show_tray_menu(
         let instance = GetModuleHandleW(null_mut());
         let class_name = encode("CaffeineMenuWindow");
         let class = WNDCLASSW {
-            style: 0,
+            // CS_DROPSHADOW gives the popup the same drop shadow as a shell
+            // context menu, without drawing one ourselves.
+            style: CS_DROPSHADOW,
             lpfnWndProc: Some(menu_wndproc),
             cbClsExtra: 0,
             cbWndExtra: 0,
@@ -924,17 +871,11 @@ pub fn show_tray_menu(
             );
         }
 
-        // The acrylic blur behind the window reproduces the translucency of
-        // Explorer's own context menus, where the wallpaper shows through.
-        // Mica is the fallback when the composition API is unavailable.
-        // The acrylic blur behind the window reproduces the translucency of
-        // Explorer's own context menus, where the wallpaper shows through.
-        // Mica is the fallback when the composition API is unavailable.
-        let acrylic = apply_acrylic(hwnd, dark);
-        let mica = !acrylic && apply_mica(hwnd, dark);
-        // Any backdrop material means the background must not be painted:
-        // the material provides it.
-        let translucent = acrylic || mica;
+        // The window stays layered because the rounded corners need it. No
+        // backdrop material: the menu paints its own solid fill, which is what
+        // a Windows context menu looks like. `translucent` stays false so the
+        // fill is always painted.
+        let translucent = false;
 
         let scale = GetDpiForWindow(hwnd) as f32 / 96.0;
         let make_font = |face: &str, height: i32| -> HFONT {
