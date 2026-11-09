@@ -45,11 +45,9 @@ const ANIM_FRAME_MS: u32 = 15;
 // The fade finishes over this fraction of the slide, so the backdrop reads
 // correctly before the window reaches full height.
 const FADE_FRACTION: f32 = 0.35;
-// Whole-window alpha. Layered windows are the only way DWM's blurred backdrop
-// shows through the client area: without it the backdrop sits behind an opaque
-// window and is invisible. 214 keeps rows readable while the desktop reads
-// through, the same balance as a Windows context menu.
-const FINAL_ALPHA: u8 = 214;
+// Whole-window alpha. 255 keeps the menu fully opaque: no desktop shows
+// through the rows and the text keeps its contrast.
+const FINAL_ALPHA: u8 = 255;
 // Hover pill: it eases between rows instead of snapping, so the highlight
 // slides when the cursor crosses rows.
 const WM_TIMER_PILL: usize = 3102;
@@ -413,8 +411,35 @@ fn mulround(px: i32, scale: f32) -> i32 {
 
 static mut MENU_WINDOW: *mut MenuWindow = null_mut();
 
+/// Handle of the open menu window, or null when the menu is closed. The tray
+/// icon reads it to decide whether a click opens or closes.
+static mut MENU_HWND: HWND = null_mut();
+
+/// When the menu last closed. A tray click that releases right after the menu
+/// dismissed is the same physical click, so it must not reopen the menu.
+static mut MENU_CLOSED_AT: Option<std::time::Instant> = None;
+
+/// Clicks within this window of the menu closing are treated as the click that
+/// dismissed it, not as a request to open the menu again.
+const SUPPRESS_AFTER_CLOSE: std::time::Duration = std::time::Duration::from_millis(400);
+
 /// True while the nested modal loop should keep pumping.
 static mut MENU_OPEN: bool = false;
+
+/// Consumes a tray click when it should toggle the menu shut instead of
+/// cycling modes or opening a second menu. Returns true when the click is
+/// handled here.
+pub fn close_if_open() -> bool {
+    unsafe {
+        if !MENU_HWND.is_null() {
+            PostMessageW(MENU_HWND, WM_CLOSE, 0, 0);
+            return true;
+        }
+        // The menu was already dismissed by deactivation, but the tray click
+        // that caused it is still releasing.
+        matches!(MENU_CLOSED_AT, Some(at) if at.elapsed() < SUPPRESS_AFTER_CLOSE)
+    }
+}
 
 unsafe fn center_text(hdc: HDC, text: &[u16], rect: &RECT) {
     unsafe {
@@ -734,6 +759,8 @@ unsafe extern "system" fn menu_wndproc(
             WM_NCDESTROY => {
                 // Notifies the modal loop in show_tray_menu to finish.
                 MENU_OPEN = false;
+                MENU_HWND = null_mut();
+                MENU_CLOSED_AT = Some(std::time::Instant::now());
                 KillTimer(hwnd, WM_TIMER_ANIM);
                 KillTimer(hwnd, WM_TIMER_PILL);
                 0
@@ -779,14 +806,13 @@ fn apply_acrylic(hwnd: HWND, dark: bool) -> bool {
             unsafe extern "system" fn(HWND, *const WindowCompositionAttributeData) -> i32;
         let set_composition: SetWindowCompositionAttributeFn = std::mem::transmute(proc);
 
-        // Explorer-style tint: mostly opaque with the blurred desktop showing
-        // through. Alpha 0xA0 keeps text readable and the desktop visible,
-        // like the real context menu.
+        // Opaque tint: the blur behind is still computed but alpha 0xFF hides
+        // it, so the menu reads as a solid Windows context-menu panel.
         let (r, g, b) = if dark { (41, 41, 41) } else { (219, 219, 219) };
         let policy = AccentPolicy {
             accent_state: AccentState::AcrylicBlurBehind,
             accent_flags: 2,
-            gradient_color: ((0xA0u32 << 24) | ((b as u32) << 16) | ((g as u32) << 8) | r as u32)
+            gradient_color: ((0xFFu32 << 24) | ((b as u32) << 16) | ((g as u32) << 8) | r as u32)
                 as i32,
             animation_id: 0,
         };
@@ -875,6 +901,7 @@ pub fn show_tray_menu(
             MENU_OPEN = false;
             return;
         }
+        MENU_HWND = hwnd;
 
         // Windows 11 rounded corners, matching native tray menus.
         let preference: i32 = DWMWCP_ROUND as i32;

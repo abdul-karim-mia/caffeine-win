@@ -383,8 +383,18 @@ unsafe extern "system" fn window_proc(
                 if let Some(tray_ptr) = GLOBAL_WINDOW {
                     let tray = &mut *tray_ptr;
                     match lparam as u32 {
-                        WM_LBUTTONUP => tray.on_left_click(),
-                        WM_RBUTTONUP => tray.show_context_menu(),
+                        // A second click on the tray icon closes the open
+                        // menu instead of acting on the app.
+                        WM_LBUTTONUP => {
+                            if !caffeine_win::menu::close_if_open() {
+                                tray.on_left_click();
+                            }
+                        }
+                        WM_RBUTTONUP => {
+                            if !caffeine_win::menu::close_if_open() {
+                                tray.show_context_menu();
+                            }
+                        }
                         _ => {}
                     }
                 }
