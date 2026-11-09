@@ -10,6 +10,25 @@ fn test_format_hms() {
 }
 
 #[test]
+fn test_toggle_mode_turns_active_mode_off() {
+    let mut state = AppState::new();
+    state.toggle_mode(TimerDuration::Minutes(15));
+    assert_eq!(state.current_mode, TimerDuration::Minutes(15));
+    // Same row again turns it off, like the Auto reset toggle.
+    state.toggle_mode(TimerDuration::Minutes(15));
+    assert_eq!(state.current_mode, TimerDuration::Off);
+    assert_eq!(state.remaining_seconds, 0);
+    // A different row switches modes instead of toggling off.
+    state.toggle_mode(TimerDuration::Hours(2));
+    assert_eq!(state.current_mode, TimerDuration::Hours(2));
+    assert_eq!(state.remaining_seconds, 7200);
+    state.toggle_mode(TimerDuration::Infinite);
+    assert_eq!(state.current_mode, TimerDuration::Infinite);
+    state.toggle_mode(TimerDuration::Infinite);
+    assert_eq!(state.current_mode, TimerDuration::Off);
+}
+
+#[test]
 fn test_status_label() {
     let mut state = AppState::new();
     assert_eq!(state.status_label(), "Off");

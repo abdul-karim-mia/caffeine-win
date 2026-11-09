@@ -23,7 +23,6 @@ use windows_sys::Win32::UI::WindowsAndMessaging::{
 
 const WM_TRAYICON: u32 = WM_USER + 1;
 const TIMER_ID_SECOND: usize = 1001;
-const CMD_AUTO_RESET: usize = 2010;
 
 #[repr(C)]
 struct LastInputInfo {
@@ -55,14 +54,15 @@ fn get_last_input_tick() -> Option<u32> {
 }
 
 const CMD_EXIT: usize = 2001;
-const CMD_TOGGLE: usize = 2002;
 const CMD_15M: usize = 2003;
 const CMD_30M: usize = 2004;
-const CMD_1H: usize = 2005;
-const CMD_2H: usize = 2006;
-const CMD_4H: usize = 2007;
-const CMD_INFINITE: usize = 2008;
-const CMD_AUTOSTART: usize = 2009;
+const CMD_45M: usize = 2005;
+const CMD_1H: usize = 2006;
+const CMD_2H: usize = 2007;
+const CMD_4H: usize = 2008;
+const CMD_INFINITE: usize = 2009;
+const CMD_AUTO_RESET: usize = 2010;
+const CMD_AUTOSTART: usize = 2011;
 /// Row identifier for the Options submenu parent; never dispatched.
 const PERSONALIZE_KEY: &str = "Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize";
 
@@ -214,15 +214,12 @@ impl TrayWindow {
         self.update_tray();
     }
 
-    fn toggle_active(&mut self) {
-        self.app_state.toggle_active();
-        self.sync_timer_and_power();
-        self.update_tray();
-    }
-
-    fn select_duration(&mut self, mode: TimerDuration) {
-        self.app_state.set_mode(mode);
-        if self.auto_reset_on_activity {
+    /// Menu-toggle semantics: re-picking the active duration turns it off,
+    /// like the Auto reset toggle. Any other duration becomes active.
+    fn toggle_duration(&mut self, mode: TimerDuration) {
+        let turning_off = self.app_state.current_mode == mode;
+        self.app_state.toggle_mode(mode);
+        if !turning_off && self.auto_reset_on_activity {
             self.last_input_tick = get_last_input_tick();
         }
         self.sync_timer_and_power();
@@ -290,29 +287,23 @@ impl TrayWindow {
                 };
             }
 
-            let active = self.app_state.current_mode.is_active();
-            let mut rows = vec![
-                MenuEntry::header(
-                    &self.app_state.status_label(),
-                    caffeine_win::menu::ICON_CLOCK,
-                ),
-                MenuEntry::icon_item(
-                    if active { "Deactivate" } else { "Activate" },
-                    CMD_TOGGLE,
-                    active,
-                    caffeine_win::menu::ICON_POWER,
-                ),
-            ];
+            let mut rows = vec![MenuEntry::header(
+                &self.app_state.status_label(),
+                caffeine_win::menu::ICON_CLOCK,
+            )];
             let durations = [
                 ("15 min", CMD_15M, TimerDuration::Minutes(15)),
                 ("30 min", CMD_30M, TimerDuration::Minutes(30)),
+                ("45 min", CMD_45M, TimerDuration::Minutes(45)),
                 ("1 h", CMD_1H, TimerDuration::Hours(1)),
                 ("2 h", CMD_2H, TimerDuration::Hours(2)),
                 ("4 h", CMD_4H, TimerDuration::Hours(4)),
                 ("Always awake", CMD_INFINITE, TimerDuration::Infinite),
             ];
             for (label, command, mode) in durations {
-                rows.push(MenuEntry::radio_item(
+                // Toggle rows: the active duration carries a tick, and picking
+                // it again turns it off, like the Auto reset toggle.
+                rows.push(MenuEntry::icon_item(
                     label,
                     command,
                     self.app_state.current_mode == mode,
@@ -413,13 +404,13 @@ unsafe extern "system" fn window_proc(
                 if let Some(tray_ptr) = GLOBAL_WINDOW {
                     let tray = &mut *tray_ptr;
                     match command {
-                        CMD_TOGGLE => tray.toggle_active(),
-                        CMD_15M => tray.select_duration(TimerDuration::Minutes(15)),
-                        CMD_30M => tray.select_duration(TimerDuration::Minutes(30)),
-                        CMD_1H => tray.select_duration(TimerDuration::Hours(1)),
-                        CMD_2H => tray.select_duration(TimerDuration::Hours(2)),
-                        CMD_4H => tray.select_duration(TimerDuration::Hours(4)),
-                        CMD_INFINITE => tray.select_duration(TimerDuration::Infinite),
+                        CMD_15M => tray.toggle_duration(TimerDuration::Minutes(15)),
+                        CMD_30M => tray.toggle_duration(TimerDuration::Minutes(30)),
+                        CMD_45M => tray.toggle_duration(TimerDuration::Minutes(45)),
+                        CMD_1H => tray.toggle_duration(TimerDuration::Hours(1)),
+                        CMD_2H => tray.toggle_duration(TimerDuration::Hours(2)),
+                        CMD_4H => tray.toggle_duration(TimerDuration::Hours(4)),
+                        CMD_INFINITE => tray.toggle_duration(TimerDuration::Infinite),
                         CMD_AUTOSTART => {
                             let _ = caffeine_win::autostart::toggle_autostart();
                         }

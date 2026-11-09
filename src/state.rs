@@ -103,6 +103,16 @@ impl AppState {
         next
     }
 
+    /// Menu-toggle semantics: selecting the already-active mode turns it off,
+    /// any other mode becomes active. Matches the Auto reset toggle.
+    pub fn toggle_mode(&mut self, mode: TimerDuration) {
+        if self.current_mode == mode {
+            self.set_mode(TimerDuration::Off);
+        } else {
+            self.set_mode(mode);
+        }
+    }
+
     /// Ticks one second down. Returns true exactly when a timed mode expires.
     /// Restarts the full countdown for the currently selected timed mode.
     /// Infinite and Off modes are intentionally unchanged.
