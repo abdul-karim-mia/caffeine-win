@@ -8,7 +8,8 @@ use std::ptr::null_mut;
 use windows_sys::Win32::Foundation::{HWND, LPARAM, LRESULT, POINT, RECT, WPARAM};
 use windows_sys::Win32::System::LibraryLoader::{GetModuleHandleW, GetProcAddress};
 use windows_sys::Win32::System::Registry::{
-    HKEY_CURRENT_USER, KEY_READ, REG_DWORD, RegCloseKey, RegOpenKeyExW, RegQueryValueExW,
+    HKEY_CURRENT_USER, KEY_READ, KEY_WRITE, REG_DWORD, RegCloseKey, RegCreateKeyExW, RegOpenKeyExW,
+    RegQueryValueExW, RegSetValueExW,
 };
 use windows_sys::Win32::UI::Shell::{
     NIF_ICON, NIF_INFO, NIF_MESSAGE, NIF_TIP, NIIF_INFO, NIM_ADD, NIM_DELETE, NIM_MODIFY,
@@ -16,9 +17,10 @@ use windows_sys::Win32::UI::Shell::{
 };
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     CreateWindowExW, DefWindowProcW, DestroyWindow, DispatchMessageW, GetCursorPos, GetMessageW,
-    HICON, IDYES, KillTimer, MB_ICONQUESTION, MB_SETFOREGROUND, MB_YESNO, MSG, MessageBoxW,
-    PostQuitMessage, RegisterWindowMessageW, SetTimer, TranslateMessage, WM_COMMAND, WM_DESTROY,
-    WM_LBUTTONUP, WM_RBUTTONUP, WM_TIMER, WM_USER,
+    HICON, HWND_BROADCAST, IDYES, KillTimer, MB_ICONQUESTION, MB_SETFOREGROUND, MB_YESNO, MSG,
+    MessageBoxW, PostQuitMessage, RegisterWindowMessageW, SMTO_ABORTIFHUNG, SendMessageTimeoutW,
+    SetTimer, TranslateMessage, WM_COMMAND, WM_DESTROY, WM_LBUTTONUP, WM_RBUTTONUP,
+    WM_SETTINGCHANGE, WM_TIMER, WM_USER,
 };
 
 const WM_TRAYICON: u32 = WM_USER + 1;
@@ -63,6 +65,7 @@ const CMD_4H: usize = 2008;
 const CMD_INFINITE: usize = 2009;
 const CMD_AUTO_RESET: usize = 2010;
 const CMD_AUTOSTART: usize = 2011;
+const CMD_DARK_MODE: usize = 2012;
 /// Row identifier for the Options submenu parent; never dispatched.
 const PERSONALIZE_KEY: &str = "Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize";
 
@@ -102,6 +105,55 @@ fn encode_wide(s: &str) -> Vec<u16> {
 fn init_system_dark() {
     unsafe {
         SYSTEM_DARK = system_prefers_dark_mode();
+    }
+}
+
+/// Switches the Windows app theme (and the taskbar with it). The registry write
+/// alone changes nothing visible: Explorer and every other app re-read the
+/// theme only after the "ImmersiveColorSet" broadcast.
+pub fn set_system_dark_mode(dark: bool) -> bool {
+    let light: u32 = u32::from(!dark);
+    unsafe {
+        let mut hkey = null_mut();
+        if RegCreateKeyExW(
+            HKEY_CURRENT_USER,
+            encode_wide(PERSONALIZE_KEY).as_ptr(),
+            0,
+            null_mut(),
+            0,
+            KEY_WRITE,
+            null_mut(),
+            &mut hkey,
+            null_mut(),
+        ) != 0
+        {
+            return false;
+        }
+        let apps = encode_wide("AppsUseLightTheme");
+        let shell = encode_wide("SystemUsesLightTheme");
+        let bytes = (&light as *const u32).cast::<u8>();
+        let size = std::mem::size_of::<u32>() as u32;
+        let written = RegSetValueExW(hkey, apps.as_ptr(), 0, REG_DWORD, bytes, size) == 0
+            && RegSetValueExW(hkey, shell.as_ptr(), 0, REG_DWORD, bytes, size) == 0;
+        RegCloseKey(hkey);
+        if !written {
+            return false;
+        }
+    }
+
+    // Tell every window to re-read the theme; our own tray window answers and
+    // refreshes SYSTEM_DARK, so the next menu open follows the new theme.
+    let payload = encode_wide("ImmersiveColorSet");
+    unsafe {
+        SendMessageTimeoutW(
+            HWND_BROADCAST,
+            WM_SETTINGCHANGE,
+            0,
+            payload.as_ptr() as isize,
+            SMTO_ABORTIFHUNG,
+            100,
+            null_mut(),
+        ) != 0
     }
 }
 
@@ -323,6 +375,12 @@ impl TrayWindow {
                 caffeine_win::menu::ICON_HOME,
             ));
             rows.push(MenuEntry::icon_item(
+                "Dark mode",
+                CMD_DARK_MODE,
+                unsafe { SYSTEM_DARK },
+                0,
+            ));
+            rows.push(MenuEntry::icon_item(
                 "Exit",
                 CMD_EXIT,
                 false,
@@ -400,6 +458,12 @@ unsafe extern "system" fn window_proc(
                 }
                 0
             }
+            WM_SETTINGCHANGE => {
+                // Windows switched dark/light while the app was running: re-read
+                // the theme so the next menu open follows it.
+                init_system_dark();
+                0
+            }
             WM_TIMER => {
                 if wparam == TIMER_ID_SECOND {
                     if let Some(tray_ptr) = GLOBAL_WINDOW {
@@ -423,6 +487,14 @@ unsafe extern "system" fn window_proc(
                         CMD_INFINITE => tray.toggle_duration(TimerDuration::Infinite),
                         CMD_AUTOSTART => {
                             let _ = caffeine_win::autostart::toggle_autostart();
+                        }
+                        CMD_DARK_MODE => {
+                            // Flips the Windows theme; the WM_SETTINGCHANGE
+                            // broadcast our own write triggers refreshes
+                            // SYSTEM_DARK, so the row closes and reopens with
+                            // the new theme applied.
+                            let dark = !unsafe { SYSTEM_DARK };
+                            set_system_dark_mode(dark);
                         }
                         CMD_AUTO_RESET => {
                             tray.toggle_auto_reset();
