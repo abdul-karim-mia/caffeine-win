@@ -47,12 +47,22 @@ const ANIM_FRAME_MS: u32 = 15;
 const DWMWA_SYSTEMBACKDROP_TYPE: u32 = 38;
 const DWMSBT_MAINWINDOW: u32 = 2;
 
-const ITEM_PADDING_X: i32 = 14;
-const CHECKBOX_WIDTH: i32 = 24;
-const ITEM_HEIGHT: i32 = 34;
+const ITEM_PADDING_X: i32 = 12;
+const CHECKBOX_WIDTH: i32 = 18;
+const ICON_SIZE: i32 = 18;
+const COLUMN_GAP: i32 = 8;
+const ITEM_HEIGHT: i32 = 30;
 const SEPARATOR_HEIGHT: i32 = 9;
-const MENU_PADDING_Y: i32 = 6;
-const MIN_WIDTH: i32 = 210;
+const MENU_PADDING_Y: i32 = 5;
+const MIN_WIDTH: i32 = 190;
+
+/// Segoe Fluent Icons code points (the font Explorer uses for its menus).
+pub const ICON_POWER: u16 = 0xE7E8;
+pub const ICON_CLOCK: u16 = 0xE121;
+pub const ICON_REFRESH: u16 = 0xE72C;
+pub const ICON_HOME: u16 = 0xE80F;
+pub const ICON_EXIT: u16 = 0xE711;
+pub const ICON_MORE: u16 = 0xE712;
 
 #[repr(i32)]
 enum AccentState {
@@ -128,39 +138,59 @@ pub struct MenuEntry {
     pub radio: bool,
     /// Status row: grayed text, never selectable.
     pub header: bool,
+    /// Segoe Fluent Icons code point for the row icon, 0 for none.
+    pub icon: u16,
 }
 
 impl MenuEntry {
-    pub fn item(label: &str, cmd: usize, checked: bool) -> MenuEntry {
-        MenuEntry {
-            label: label.to_string(),
-            cmd,
-            checked,
-            separator: false,
-            radio: false,
-            header: false,
-        }
-    }
-
-    pub fn radio_item(label: &str, cmd: usize, checked: bool) -> MenuEntry {
-        MenuEntry {
-            label: label.to_string(),
-            cmd,
-            checked,
-            separator: false,
-            radio: true,
-            header: false,
-        }
-    }
-
-    pub fn header(label: &str) -> MenuEntry {
+    fn base(label: &str, icon: u16) -> MenuEntry {
         MenuEntry {
             label: label.to_string(),
             cmd: 0,
             checked: false,
             separator: false,
             radio: false,
+            header: false,
+            icon,
+        }
+    }
+
+    pub fn item(label: &str, cmd: usize, checked: bool) -> MenuEntry {
+        MenuEntry {
+            cmd,
+            checked,
+            ..MenuEntry::base(label, 0)
+        }
+    }
+
+    pub fn icon_item(label: &str, cmd: usize, checked: bool, icon: u16) -> MenuEntry {
+        MenuEntry {
+            cmd,
+            checked,
+            ..MenuEntry::base(label, icon)
+        }
+    }
+
+    pub fn radio_item(label: &str, cmd: usize, checked: bool, icon: u16) -> MenuEntry {
+        MenuEntry {
+            cmd,
+            checked,
+            radio: true,
+            ..MenuEntry::base(label, icon)
+        }
+    }
+
+    pub fn header(label: &str, icon: u16) -> MenuEntry {
+        MenuEntry {
             header: true,
+            ..MenuEntry::base(label, icon)
+        }
+    }
+
+    pub fn separator() -> MenuEntry {
+        MenuEntry {
+            separator: true,
+            ..MenuEntry::base("", 0)
         }
     }
 
@@ -209,8 +239,11 @@ struct MenuWindow {
     parent: HWND,
     entries: Vec<MenuEntry>,
     item_rects: Vec<RECT>,
+    /// Label font: Segoe UI Variable Text, like Explorer's menus.
     font: HFONT,
-    /// Second font for ✓ ○ ● marks; Segoe UI lacks them.
+    /// Icon font for the left icon column: Segoe Fluent Icons.
+    icon_font: HFONT,
+    /// Mark font for ✓ ○ ●; Segoe UI lacks those.
     mark_font: HFONT,
     /// Index into `entries` of the highlighted row, if any.
     highlight: Option<usize>,
@@ -315,6 +348,19 @@ unsafe fn center_text(hdc: HDC, text: &[u16], rect: &RECT) {
     }
 }
 
+/// Draws one Segoe Fluent Icons code point centered in the cell.
+unsafe fn draw_menu_icon(hdc: HDC, menu: &MenuWindow, icon: u16, rect: RECT, color: COLORREF) {
+    unsafe {
+        if menu.icon_font.is_null() || icon == 0 {
+            return;
+        }
+        SetTextColor(hdc, color);
+        let old_font = SelectObject(hdc, menu.icon_font);
+        center_text(hdc, &[icon], &rect);
+        SelectObject(hdc, old_font);
+    }
+}
+
 unsafe extern "system" fn menu_wndproc(
     hwnd: HWND,
     msg: u32,
@@ -391,16 +437,40 @@ unsafe extern "system" fn menu_wndproc(
                         continue;
                     }
 
+                    // Columns: mark, icon, label — Explorer's own spacing.
                     let text_rect = RECT {
-                        left: rect.left + mulround(CHECKBOX_WIDTH, menu.scale),
+                        left: rect.left
+                            + mulround(
+                                ITEM_PADDING_X
+                                    + CHECKBOX_WIDTH
+                                    + COLUMN_GAP
+                                    + ICON_SIZE
+                                    + COLUMN_GAP,
+                                menu.scale,
+                            ),
                         top: rect.top,
                         right: rect.right - mulround(ITEM_PADDING_X, menu.scale),
+                        bottom: rect.bottom,
+                    };
+
+                    let icon_rect = RECT {
+                        left: rect.left
+                            + mulround(ITEM_PADDING_X + CHECKBOX_WIDTH + COLUMN_GAP, menu.scale),
+                        top: rect.top,
+                        right: rect.left
+                            + mulround(
+                                ITEM_PADDING_X + CHECKBOX_WIDTH + COLUMN_GAP + ICON_SIZE,
+                                menu.scale,
+                            ),
                         bottom: rect.bottom,
                     };
 
                     if entry.header {
                         // Status header: grayed, no mark column used.
                         SetTextColor(hdc, menu.colors().gray);
+                        if entry.icon != 0 {
+                            draw_menu_icon(hdc, menu, entry.icon, icon_rect, menu.colors().gray);
+                        }
                         let label: Vec<u16> = entry.label.encode_utf16().collect();
                         let mut target = text_rect;
                         DrawTextW(
@@ -433,10 +503,15 @@ unsafe extern "system" fn menu_wndproc(
                         SetTextColor(hdc, mark_color);
                         let glyph: Vec<u16> = mark.encode_utf16().collect();
                         let mut glyph_rect = rect;
-                        glyph_rect.right = text_rect.left;
+                        glyph_rect.right = text_rect.left
+                            - mulround(COLUMN_GAP + ICON_SIZE + COLUMN_GAP, menu.scale);
                         SelectObject(hdc, menu.mark_font);
                         center_text(hdc, &glyph, &glyph_rect);
                         SelectObject(hdc, menu.font);
+                    }
+
+                    if entry.icon != 0 {
+                        draw_menu_icon(hdc, menu, entry.icon, icon_rect, fg);
                     }
 
                     SetTextColor(hdc, fg);
@@ -719,10 +794,9 @@ pub fn show_tray_menu(
         }
 
         let scale = GetDpiForWindow(hwnd) as f32 / 96.0;
-        let make_font = |face: &str| -> HFONT {
-            let height = -mulround(15, scale);
+        let make_font = |face: &str, height: i32| -> HFONT {
             let f = CreateFontW(
-                height,
+                -mulround(height, scale),
                 0,
                 0,
                 0,
@@ -741,7 +815,7 @@ pub fn show_tray_menu(
                 return f;
             }
             CreateFontW(
-                -15,
+                -height,
                 0,
                 0,
                 0,
@@ -757,8 +831,11 @@ pub fn show_tray_menu(
                 encode("Segoe UI").as_ptr(),
             )
         };
-        let font = make_font("Segoe UI");
-        let mark_font = make_font("Segoe UI Symbol");
+        // Windows 11 menus use the Variable Text face at 14px and Segoe Fluent
+        // Icons at 16px; both fall back to plain Segoe UI when missing.
+        let font = make_font("Segoe UI Variable Text", 14);
+        let icon_font = make_font("Segoe Fluent Icons", 16);
+        let mark_font = make_font("Segoe UI Symbol", 14);
 
         let mut menu = Box::new(MenuWindow {
             hwnd,
@@ -766,6 +843,7 @@ pub fn show_tray_menu(
             entries,
             item_rects: Vec::new(),
             font,
+            icon_font,
             mark_font,
             highlight: None,
             progress: 0.0,
@@ -778,6 +856,15 @@ pub fn show_tray_menu(
 
         // Width from the longest label.
         {
+            let columns = mulround(
+                ITEM_PADDING_X
+                    + CHECKBOX_WIDTH
+                    + COLUMN_GAP
+                    + ICON_SIZE
+                    + COLUMN_GAP
+                    + ITEM_PADDING_X,
+                menu.scale,
+            );
             let hdc = CreateCompatibleDC(null_mut());
             let old_font = SelectObject(hdc, menu.font);
             let mut width = mulround(MIN_WIDTH, menu.scale);
@@ -788,9 +875,7 @@ pub fn show_tray_menu(
                 let text: Vec<u16> = entry.label.encode_utf16().collect();
                 let mut size = SIZE { cx: 0, cy: 0 };
                 if GetTextExtentPoint32W(hdc, text.as_ptr(), text.len() as i32, &mut size) != 0 {
-                    let needed =
-                        size.cx + mulround(CHECKBOX_WIDTH + ITEM_PADDING_X * 2, menu.scale);
-                    width = width.max(needed);
+                    width = width.max(size.cx + columns);
                 }
             }
             SelectObject(hdc, old_font);

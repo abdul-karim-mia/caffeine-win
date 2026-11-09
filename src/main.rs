@@ -292,43 +292,51 @@ impl TrayWindow {
 
             let active = self.app_state.current_mode.is_active();
             let mut rows = vec![
-                MenuEntry::header(&format!("☕ {}", self.app_state.status_label())),
-                MenuEntry::item(
-                    if active {
-                        "⏻ Deactivate"
-                    } else {
-                        "⏻ Activate"
-                    },
+                MenuEntry::header(
+                    &self.app_state.status_label(),
+                    caffeine_win::menu::ICON_CLOCK,
+                ),
+                MenuEntry::icon_item(
+                    if active { "Deactivate" } else { "Activate" },
                     CMD_TOGGLE,
                     active,
+                    caffeine_win::menu::ICON_POWER,
                 ),
             ];
             let durations = [
-                ("◷ 15 min", CMD_15M, TimerDuration::Minutes(15)),
-                ("◷ 30 min", CMD_30M, TimerDuration::Minutes(30)),
-                ("◷ 1 h", CMD_1H, TimerDuration::Hours(1)),
-                ("◷ 2 h", CMD_2H, TimerDuration::Hours(2)),
-                ("◷ 4 h", CMD_4H, TimerDuration::Hours(4)),
-                ("∞ Always awake", CMD_INFINITE, TimerDuration::Infinite),
+                ("15 min", CMD_15M, TimerDuration::Minutes(15)),
+                ("30 min", CMD_30M, TimerDuration::Minutes(30)),
+                ("1 h", CMD_1H, TimerDuration::Hours(1)),
+                ("2 h", CMD_2H, TimerDuration::Hours(2)),
+                ("4 h", CMD_4H, TimerDuration::Hours(4)),
+                ("Always awake", CMD_INFINITE, TimerDuration::Infinite),
             ];
             for (label, command, mode) in durations {
                 rows.push(MenuEntry::radio_item(
                     label,
                     command,
                     self.app_state.current_mode == mode,
+                    caffeine_win::menu::ICON_CLOCK,
                 ));
             }
-            rows.push(MenuEntry::item(
-                "↻ Auto reset on activity",
+            rows.push(MenuEntry::icon_item(
+                "Auto reset on activity",
                 CMD_AUTO_RESET,
                 self.auto_reset_on_activity,
+                caffeine_win::menu::ICON_REFRESH,
             ));
-            rows.push(MenuEntry::item(
-                "⌂ Start with Windows",
+            rows.push(MenuEntry::icon_item(
+                "Start with Windows",
                 CMD_AUTOSTART,
                 caffeine_win::autostart::is_autostart_enabled(),
+                caffeine_win::menu::ICON_HOME,
             ));
-            rows.push(MenuEntry::item("✕ Exit", CMD_EXIT, false));
+            rows.push(MenuEntry::icon_item(
+                "Exit",
+                CMD_EXIT,
+                false,
+                caffeine_win::menu::ICON_EXIT,
+            ));
 
             caffeine_win::menu::show_tray_menu(
                 self.hwnd,
