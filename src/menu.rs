@@ -320,6 +320,9 @@ impl MenuWindow {
     fn animate_pill(&mut self) -> bool {
         let target_alpha = if self.highlight.is_some() { 255.0 } else { 0.0 };
         self.pill_alpha += (target_alpha - self.pill_alpha) * PILL_EASE;
+        if (self.pill_alpha - target_alpha).abs() < 0.5 {
+            self.pill_alpha = target_alpha;
+        }
 
         if let Some(target) = self.pill_rect(self.highlight) {
             let lerp = |from: i32, to: i32| from + ((to - from) as f32 * PILL_EASE) as i32;
@@ -327,13 +330,30 @@ impl MenuWindow {
             self.pill.right = lerp(self.pill.right, target.right);
             self.pill.top = lerp(self.pill.top, target.top);
             self.pill.bottom = lerp(self.pill.bottom, target.bottom);
+            // Integer easing stalls within a couple of pixels of the target
+            // (a 2px delta rounds to zero), which would leave every row
+            // settled at a slightly different offset. Snap the last pixels so
+            // the pill lands exactly on the row.
+            let near = |a: i32, b: i32| (a - b).abs() <= 2;
+            if near(self.pill.left, target.left)
+                && near(self.pill.right, target.right)
+                && near(self.pill.top, target.top)
+                && near(self.pill.bottom, target.bottom)
+            {
+                self.pill = target;
+            }
+            return !(self.pill_alpha == target_alpha
+                && self.pill.left == target.left
+                && self.pill.right == target.right
+                && self.pill.top == target.top
+                && self.pill.bottom == target.bottom);
         }
 
-        if self.highlight.is_none() && self.pill_alpha < 1.0 {
+        if self.pill_alpha < 0.5 {
             self.pill_alpha = 0.0;
             return false;
         }
-        self.pill_alpha > 0.01 || self.highlight.is_some()
+        true
     }
 
     /// Send the selected command to the parent window and close.
