@@ -29,18 +29,27 @@ use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
 };
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     CreateWindowExW, DefWindowProcW, DestroyWindow, DispatchMessageW, GetClientRect, GetMessageW,
-    GetWindowRect, HCURSOR, HWND_TOPMOST, IDC_ARROW, KillTimer, LoadCursorW, MSG, PostMessageW,
-    PostQuitMessage, RegisterClassW, SW_SHOWNOACTIVATE, SWP_NOACTIVATE, SWP_SHOWWINDOW, SetCursor,
-    SetForegroundWindow, SetTimer, SetWindowPos, ShowWindow, TranslateMessage, WA_INACTIVE,
+    GetWindowRect, HCURSOR, HWND_TOPMOST, IDC_ARROW, KillTimer, LWA_ALPHA, LoadCursorW, MSG,
+    PostMessageW, PostQuitMessage, RegisterClassW, SW_SHOWNOACTIVATE, SWP_NOACTIVATE,
+    SWP_SHOWWINDOW, SetCursor, SetForegroundWindow, SetLayeredWindowAttributes, SetTimer,
+    SetWindowPos, ShowWindow, TranslateMessage, WA_INACTIVE,
     WM_ACTIVATE, WM_CLOSE, WM_COMMAND, WM_ERASEBKGND, WM_KEYDOWN, WM_KEYUP, WM_KILLFOCUS,
     WM_LBUTTONUP, WM_MOUSEMOVE, WM_NCDESTROY, WM_PAINT, WM_SETCURSOR, WM_TIMER, WNDCLASSW,
-    WS_EX_TOOLWINDOW, WS_EX_TOPMOST, WS_POPUP,
+    WS_EX_LAYERED, WS_EX_TOOLWINDOW, WS_EX_TOPMOST, WS_POPUP,
 };
 
 const WM_TIMER_ANIM: usize = 3101;
 
 const ANIM_DURATION_MS: u32 = 200;
 const ANIM_FRAME_MS: u32 = 15;
+// The fade finishes over this fraction of the slide, so the backdrop reads
+// correctly before the window reaches full height.
+const FADE_FRACTION: f32 = 0.35;
+// Whole-window alpha. Layered windows are the only way DWM's blurred backdrop
+// shows through the client area: without it the backdrop sits behind an opaque
+// window and is invisible. 214 keeps rows readable while the desktop reads
+// through, the same balance as a Windows context menu.
+const FINAL_ALPHA: u8 = 214;
 
 /// Mica: the documented Windows 11 backdrop material, applied through
 /// DwmSetWindowAttribute and themed by the system (light/dark + accent).
@@ -257,8 +266,9 @@ struct MenuWindow {
     final_size: (i32, i32),
     /// Accent tint for marks, from the DWM AccentColor registry value.
     accent: COLORREF,
-    /// True when the Windows 11 Mica material sits behind the client area.
-    mica: bool,
+    /// True when a DWM backdrop material (acrylic or Mica) sits behind the
+    /// client area, so the background must not be painted opaque.
+    translucent: bool,
 }
 
 impl MenuWindow {
@@ -320,6 +330,10 @@ impl MenuWindow {
                 current_height,
                 SWP_NOACTIVATE | SWP_SHOWWINDOW,
             );
+
+            let fade = (t / FADE_FRACTION).min(1.0);
+            let alpha = (FINAL_ALPHA as f32 * fade) as u8;
+            SetLayeredWindowAttributes(self.hwnd, 0, alpha, LWA_ALPHA);
 
             if self.progress >= 1.0 {
                 KillTimer(self.hwnd, WM_TIMER_ANIM);
@@ -400,7 +414,7 @@ unsafe extern "system" fn menu_wndproc(
                 let mem_bitmap = CreateCompatibleBitmap(paint_hdc, width, height);
                 let old_bitmap = SelectObject(mem_dc, mem_bitmap);
                 let hdc = mem_dc;
-                if !menu.mica {
+                if !menu.translucent {
                     // Opaque base for acrylic fallback; under Mica the material
                     // itself is the background, so an opaque fill would hide it.
                     let background = CreateSolidBrush(bg);
@@ -678,13 +692,14 @@ fn apply_acrylic(hwnd: HWND, dark: bool) -> bool {
             unsafe extern "system" fn(HWND, *const WindowCompositionAttributeData) -> i32;
         let set_composition: SetWindowCompositionAttributeFn = std::mem::transmute(proc);
 
-        // Twinkle Tray style tint: mostly opaque with the blurred desktop
-        // showing through, which is how Explorer draws context menus.
+        // Explorer-style tint: mostly opaque with the blurred desktop showing
+        // through. Alpha 0xA0 keeps text readable and the desktop visible,
+        // like the real context menu.
         let (r, g, b) = if dark { (41, 41, 41) } else { (219, 219, 219) };
         let policy = AccentPolicy {
             accent_state: AccentState::AcrylicBlurBehind,
             accent_flags: 2,
-            gradient_color: ((0xD0u32 << 24) | ((b as u32) << 16) | ((g as u32) << 8) | r as u32)
+            gradient_color: ((0xA0u32 << 24) | ((b as u32) << 16) | ((g as u32) << 8) | r as u32)
                 as i32,
             animation_id: 0,
         };
@@ -693,7 +708,9 @@ fn apply_acrylic(hwnd: HWND, dark: bool) -> bool {
             data: &policy as *const AccentPolicy as *mut std::ffi::c_void,
             size: std::mem::size_of::<AccentPolicy>() as u32,
         };
-        set_composition(hwnd, &data) != 0
+        // Reports success as an HRESULT (S_OK is 0), the documented shape of
+        // this undocumented API.
+        set_composition(hwnd, &data) == 0
     }
 }
 
@@ -751,10 +768,10 @@ pub fn show_tray_menu(
         RegisterClassW(&class);
 
         // Created hidden at zero size; the animation grows it into place.
-        // Not layered: layered windows bypass the DWM backdrop, so Mica and
-        // acrylic would not render.
+        // Layered so the DWM backdrop behind it is actually visible; see
+        // FINAL_ALPHA.
         let hwnd = CreateWindowExW(
-            (WS_EX_TOOLWINDOW | WS_EX_TOPMOST) as u32,
+            (WS_EX_LAYERED | WS_EX_TOOLWINDOW | WS_EX_TOPMOST) as u32,
             class_name.as_ptr(),
             encode("Caffeine Menu").as_ptr(),
             WS_POPUP,
@@ -796,8 +813,14 @@ pub fn show_tray_menu(
         // The acrylic blur behind the window reproduces the translucency of
         // Explorer's own context menus, where the wallpaper shows through.
         // Mica is the fallback when the composition API is unavailable.
+        // The acrylic blur behind the window reproduces the translucency of
+        // Explorer's own context menus, where the wallpaper shows through.
+        // Mica is the fallback when the composition API is unavailable.
         let acrylic = apply_acrylic(hwnd, dark);
         let mica = !acrylic && apply_mica(hwnd, dark);
+        // Any backdrop material means the background must not be painted:
+        // the material provides it.
+        let translucent = acrylic || mica;
 
         let scale = GetDpiForWindow(hwnd) as f32 / 96.0;
         let make_font = |face: &str, height: i32| -> HFONT {
@@ -857,9 +880,8 @@ pub fn show_tray_menu(
             scale,
             final_size: (0, 0),
             accent,
-            mica,
+            translucent,
         });
-
         // Width from the longest label.
         {
             let columns = mulround(
@@ -934,6 +956,11 @@ pub fn show_tray_menu(
             }
         };
         let (x, y) = menu_position(anchor, work, width, height);
+
+        // Start fully invisible; the animation ramps the alpha up to
+        // FINAL_ALPHA so the blurred backdrop fades in with the slide.
+        SetLayeredWindowAttributes(hwnd, 0, 0, LWA_ALPHA);
+
         MENU_WINDOW = Box::into_raw(menu);
 
         SetWindowPos(hwnd, HWND_TOPMOST, x, y + height, width, 0, SWP_NOACTIVATE);
