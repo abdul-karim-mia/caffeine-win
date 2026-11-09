@@ -54,9 +54,9 @@ const FINAL_ALPHA: u8 = 214;
 // slides when the cursor crosses rows.
 const WM_TIMER_PILL: usize = 3102;
 const PILL_FRAME_MS: u32 = 16;
-const PILL_EASE: f32 = 0.32;
+const PILL_EASE: f32 = 0.4;
 const PILL_INSET_X: i32 = 4;
-const PILL_INSET_Y: i32 = 2;
+const PILL_INSET_Y: i32 = 1;
 
 /// Mica: the documented Windows 11 backdrop material, applied through
 /// DwmSetWindowAttribute and themed by the system (light/dark + accent).
