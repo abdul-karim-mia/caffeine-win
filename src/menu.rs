@@ -32,10 +32,10 @@ use windows_sys::Win32::UI::WindowsAndMessaging::{
     GetWindowRect, HCURSOR, HWND_TOPMOST, IDC_ARROW, KillTimer, LWA_ALPHA, LoadCursorW, MSG,
     PostMessageW, PostQuitMessage, RegisterClassW, SW_SHOWNOACTIVATE, SWP_NOACTIVATE,
     SWP_SHOWWINDOW, SetCursor, SetForegroundWindow, SetLayeredWindowAttributes, SetTimer,
-    SetWindowPos, ShowWindow, TranslateMessage, WA_INACTIVE,
-    WM_ACTIVATE, WM_CLOSE, WM_COMMAND, WM_ERASEBKGND, WM_KEYDOWN, WM_KEYUP, WM_KILLFOCUS,
-    WM_LBUTTONUP, WM_MOUSEMOVE, WM_NCDESTROY, WM_PAINT, WM_SETCURSOR, WM_TIMER, WNDCLASSW,
-    WS_EX_LAYERED, WS_EX_TOOLWINDOW, WS_EX_TOPMOST, WS_POPUP,
+    SetWindowPos, ShowWindow, TranslateMessage, WA_INACTIVE, WM_ACTIVATE, WM_CLOSE, WM_COMMAND,
+    WM_ERASEBKGND, WM_KEYDOWN, WM_KEYUP, WM_KILLFOCUS, WM_LBUTTONUP, WM_MOUSEMOVE, WM_NCDESTROY,
+    WM_PAINT, WM_SETCURSOR, WM_TIMER, WNDCLASSW, WS_EX_LAYERED, WS_EX_TOOLWINDOW, WS_EX_TOPMOST,
+    WS_POPUP,
 };
 
 const WM_TIMER_ANIM: usize = 3101;
@@ -50,6 +50,13 @@ const FADE_FRACTION: f32 = 0.35;
 // window and is invisible. 214 keeps rows readable while the desktop reads
 // through, the same balance as a Windows context menu.
 const FINAL_ALPHA: u8 = 214;
+// Hover pill: it eases between rows instead of snapping, so the highlight
+// slides when the cursor crosses rows.
+const WM_TIMER_PILL: usize = 3102;
+const PILL_FRAME_MS: u32 = 16;
+const PILL_EASE: f32 = 0.32;
+const PILL_INSET_X: i32 = 4;
+const PILL_INSET_Y: i32 = 2;
 
 /// Mica: the documented Windows 11 backdrop material, applied through
 /// DwmSetWindowAttribute and themed by the system (light/dark + accent).
@@ -258,6 +265,10 @@ struct MenuWindow {
     mark_font: HFONT,
     /// Index into `entries` of the highlighted row, if any.
     highlight: Option<usize>,
+    /// Hover pill: its current rect and 0..255 opacity. Eases toward the
+    /// highlighted row each frame, so the highlight moves between rows.
+    pill: RECT,
+    pill_alpha: f32,
     /// Slide animation progress, 0.0 ..= 1.0.
     progress: f32,
     dark: bool,
@@ -289,6 +300,40 @@ impl MenuWindow {
             .iter()
             .position(|rect| rect.left <= x && x < rect.right && rect.top <= y && y < rect.bottom)
             .filter(|&index| self.entries[index].selectable())
+    }
+
+    /// Row rect inset the way the hover pill is drawn.
+    fn pill_rect(&self, index: Option<usize>) -> Option<RECT> {
+        let index = index?;
+        let rect = *self.item_rects.get(index)?;
+        Some(RECT {
+            left: rect.left + mulround(PILL_INSET_X, self.scale),
+            right: rect.right - mulround(PILL_INSET_X, self.scale),
+            top: rect.top + mulround(PILL_INSET_Y, self.scale),
+            bottom: rect.bottom - mulround(PILL_INSET_Y, self.scale),
+        })
+    }
+
+    /// One frame of the hover animation: ease the pill toward the highlighted
+    /// row and its opacity toward visible or hidden. Returns true while the
+    /// animation still needs frames.
+    fn animate_pill(&mut self) -> bool {
+        let target_alpha = if self.highlight.is_some() { 255.0 } else { 0.0 };
+        self.pill_alpha += (target_alpha - self.pill_alpha) * PILL_EASE;
+
+        if let Some(target) = self.pill_rect(self.highlight) {
+            let lerp = |from: i32, to: i32| from + ((to - from) as f32 * PILL_EASE) as i32;
+            self.pill.left = lerp(self.pill.left, target.left);
+            self.pill.right = lerp(self.pill.right, target.right);
+            self.pill.top = lerp(self.pill.top, target.top);
+            self.pill.bottom = lerp(self.pill.bottom, target.bottom);
+        }
+
+        if self.highlight.is_none() && self.pill_alpha < 1.0 {
+            self.pill_alpha = 0.0;
+            return false;
+        }
+        self.pill_alpha > 0.01 || self.highlight.is_some()
     }
 
     /// Send the selected command to the parent window and close.
@@ -422,15 +467,21 @@ unsafe extern "system" fn menu_wndproc(
                     DeleteObject(background);
                 }
 
-                if let Some(index) = menu.highlight {
-                    let mut rect = menu.item_rects[index];
-                    // Inset so the highlight is an inset pill, like native menus.
-                    rect.left += mulround(4, menu.scale);
-                    rect.right -= mulround(4, menu.scale);
-                    rect.top += mulround(2, menu.scale);
-                    rect.bottom -= mulround(2, menu.scale);
-                    let brush = CreateSolidBrush(hover);
-                    FillRect(hdc, &rect, brush);
+                // Hover pill: blended between the background and the hover
+                // color by its animated opacity, so it eases in, moves, and
+                // fades out instead of jumping.
+                if menu.pill_alpha > 0.01 {
+                    let mix = |base: u32, target: u32| -> COLORREF {
+                        let t = (menu.pill_alpha / 255.0).clamp(0.0, 1.0);
+                        let channel = |shift: u32| {
+                            let b = (base >> shift) & 0xff;
+                            let h = (target >> shift) & 0xff;
+                            (b as f32 + ((h as f32 - b as f32) * t)) as u32
+                        };
+                        channel(0) | (channel(8) << 8) | (channel(16) << 16)
+                    };
+                    let brush = CreateSolidBrush(mix(bg, hover));
+                    FillRect(hdc, &menu.pill, brush);
                     DeleteObject(brush);
                 }
 
@@ -568,7 +619,15 @@ unsafe extern "system" fn menu_wndproc(
                 if x > 0 || y > 0 {
                     let hit = menu.hit_test(x, y);
                     if hit != menu.highlight {
+                        // Animate from the old position when the pill is
+                        // already visible, so it slides to the new row.
+                        if menu.pill_alpha < 1.0 {
+                            if let Some(rect) = menu.pill_rect(hit) {
+                                menu.pill = rect;
+                            }
+                        }
                         menu.highlight = hit;
+                        SetTimer(hwnd, WM_TIMER_PILL, PILL_FRAME_MS, None);
                         InvalidateRect(hwnd, null_mut(), 0);
                     }
                 }
@@ -578,6 +637,7 @@ unsafe extern "system" fn menu_wndproc(
             0x02A3 => {
                 if menu.highlight.is_some() {
                     menu.highlight = None;
+                    SetTimer(hwnd, WM_TIMER_PILL, PILL_FRAME_MS, None);
                     InvalidateRect(hwnd, null_mut(), 0);
                 }
                 0
@@ -641,6 +701,12 @@ unsafe extern "system" fn menu_wndproc(
                 if wparam == WM_TIMER_ANIM {
                     menu.animate();
                     0
+                } else if wparam == WM_TIMER_PILL {
+                    if !menu.animate_pill() {
+                        KillTimer(hwnd, WM_TIMER_PILL);
+                    }
+                    InvalidateRect(hwnd, null_mut(), 0);
+                    0
                 } else {
                     DefWindowProcW(hwnd, msg, wparam, lparam)
                 }
@@ -649,6 +715,7 @@ unsafe extern "system" fn menu_wndproc(
                 // Notifies the modal loop in show_tray_menu to finish.
                 MENU_OPEN = false;
                 KillTimer(hwnd, WM_TIMER_ANIM);
+                KillTimer(hwnd, WM_TIMER_PILL);
                 0
             }
             WM_ACTIVATE => {
@@ -875,6 +942,13 @@ pub fn show_tray_menu(
             icon_font,
             mark_font,
             highlight: None,
+            pill: RECT {
+                left: 0,
+                top: 0,
+                right: 0,
+                bottom: 0,
+            },
+            pill_alpha: 0.0,
             progress: 0.0,
             dark,
             scale,
