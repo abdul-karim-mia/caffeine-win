@@ -44,8 +44,10 @@ const ANIM_FRAME_MS: u32 = 15;
 
 /// Mica: the documented Windows 11 backdrop material, applied through
 /// DwmSetWindowAttribute and themed by the system (light/dark + accent).
+/// Transient is the variant Explorer uses for context menus and popups: it is
+/// more transparent than the main-window material.
 const DWMWA_SYSTEMBACKDROP_TYPE: u32 = 38;
-const DWMSBT_MAINWINDOW: u32 = 2;
+const DWMSBT_TRANSIENTWINDOW: u32 = 4;
 
 const ITEM_PADDING_X: i32 = 12;
 const CHECKBOX_WIDTH: i32 = 18;
@@ -104,7 +106,7 @@ fn apply_mica(hwnd: HWND, dark: bool) -> bool {
         if DwmExtendFrameIntoClientArea(hwnd, &margins) != 0 {
             return false;
         }
-        let backdrop: u32 = DWMSBT_MAINWINDOW;
+        let backdrop: u32 = DWMSBT_TRANSIENTWINDOW;
         if DwmSetWindowAttribute(
             hwnd,
             DWMWA_SYSTEMBACKDROP_TYPE,
@@ -660,20 +662,24 @@ unsafe extern "system" fn menu_wndproc(
     }
 }
 
-/// Applies the Twinkle Tray acrylic backdrop to the menu window.
-fn apply_acrylic(hwnd: HWND, dark: bool) {
+/// Applies the Twinkle Tray acrylic backdrop to the menu window. Returns
+/// Applies the acrylic backdrop. Returns false when the composition API is
+/// missing so Mica can be tried instead.
+fn apply_acrylic(hwnd: HWND, dark: bool) -> bool {
     unsafe {
         let user32 = GetModuleHandleW(encode("user32.dll").as_ptr());
         if user32.is_null() {
-            return;
+            return false;
         }
         let Some(proc) = GetProcAddress(user32, b"SetWindowCompositionAttribute\0".as_ptr()) else {
-            return;
+            return false;
         };
         type SetWindowCompositionAttributeFn =
             unsafe extern "system" fn(HWND, *const WindowCompositionAttributeData) -> i32;
         let set_composition: SetWindowCompositionAttributeFn = std::mem::transmute(proc);
 
+        // Twinkle Tray style tint: mostly opaque with the blurred desktop
+        // showing through, which is how Explorer draws context menus.
         let (r, g, b) = if dark { (41, 41, 41) } else { (219, 219, 219) };
         let policy = AccentPolicy {
             accent_state: AccentState::AcrylicBlurBehind,
@@ -687,7 +693,7 @@ fn apply_acrylic(hwnd: HWND, dark: bool) {
             data: &policy as *const AccentPolicy as *mut std::ffi::c_void,
             size: std::mem::size_of::<AccentPolicy>() as u32,
         };
-        set_composition(hwnd, &data);
+        set_composition(hwnd, &data) != 0
     }
 }
 
@@ -787,11 +793,11 @@ pub fn show_tray_menu(
             );
         }
 
-        // Mica on Windows 11; acrylic blur on anything older.
-        let mica = apply_mica(hwnd, dark);
-        if !mica {
-            apply_acrylic(hwnd, dark);
-        }
+        // The acrylic blur behind the window reproduces the translucency of
+        // Explorer's own context menus, where the wallpaper shows through.
+        // Mica is the fallback when the composition API is unavailable.
+        let acrylic = apply_acrylic(hwnd, dark);
+        let mica = !acrylic && apply_mica(hwnd, dark);
 
         let scale = GetDpiForWindow(hwnd) as f32 / 96.0;
         let make_font = |face: &str, height: i32| -> HFONT {
