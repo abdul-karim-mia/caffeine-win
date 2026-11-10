@@ -2,16 +2,16 @@ use std::f32::consts::PI;
 
 use windows_sys::Win32::Foundation::COLORREF;
 use windows_sys::Win32::Graphics::Gdi::{
-    AngleArc, CreateBitmap, CreateCompatibleBitmap, CreateCompatibleDC, CreatePen,
-    CreateSolidBrush, DeleteDC, DeleteObject, Ellipse, GetDC, HGDIOBJ, LineTo, MoveToEx, PS_SOLID,
-    Pie, ReleaseDC, SelectObject,
+    CreateBitmap, CreateCompatibleBitmap, CreateCompatibleDC, CreatePen, CreateSolidBrush,
+    DeleteDC, DeleteObject, Ellipse, GetDC, HGDIOBJ, LineTo, MoveToEx, PS_SOLID, Pie, ReleaseDC,
+    SelectObject,
 };
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     CreateIconIndirect, DestroyIcon, HICON, ICONINFO,
 };
 
 pub const ICON_SIZE: i32 = 32;
-/// Span of the click-acknowledgement arc, in degrees.
+/// Span of the click-acknowledgement sweep wedge, in degrees.
 const SWEEP_ARC_DEGREES: f32 = 90.0;
 
 #[inline]
@@ -164,28 +164,32 @@ pub fn create_tray_icon(
             DeleteObject(object);
         }
 
-        // The sweep arc is drawn last, over whichever state the icon is in,
+        // The sweep wedge is drawn last, over whichever state the icon is in,
         // so the click acknowledgement also reads on the Off and Always
         // awake icons.
         if let Some(sweep) = sweep {
             let sweep = sweep.clamp(0.0, 1.0);
-            let sweep_pen = CreatePen(PS_SOLID, 3, rgb(255, 255, 255));
-            if !sweep_pen.is_null() {
-                let old_pen = SelectObject(mem_dc, sweep_pen as HGDIOBJ);
-                // A quarter-turn arc riding around the ring. GDI measures
-                // angles counterclockwise from the x-axis, so twelve o'clock
-                // is -90 degrees.
-                let start = sweep * 360.0 - 90.0;
-                let _ = AngleArc(
-                    mem_dc,
-                    center,
-                    center,
-                    (radius + 2) as u32,
-                    start,
-                    -SWEEP_ARC_DEGREES,
+            // A filled wedge whose leading edge rotates a full turn, so the
+            // circle is swiped from the centre outwards instead of a streak
+            // travelling along the rim.
+            let wedge = CreateSolidBrush(rgb(255, 255, 255));
+            if !wedge.is_null() {
+                let old_brush = SelectObject(mem_dc, wedge as HGDIOBJ);
+                let lead = sweep * 2.0 * PI;
+                let trail = lead - SWEEP_ARC_DEGREES.to_radians();
+                let point = |angle: f32| -> (i32, i32) {
+                    (
+                        center + (radius as f32 * angle.sin()) as i32,
+                        center - (radius as f32 * angle.cos()) as i32,
+                    )
+                };
+                let (trail_x, trail_y) = point(trail);
+                let (lead_x, lead_y) = point(lead);
+                Pie(
+                    mem_dc, left, top, right, bottom, trail_x, trail_y, lead_x, lead_y,
                 );
-                SelectObject(mem_dc, old_pen);
-                DeleteObject(sweep_pen as HGDIOBJ);
+                SelectObject(mem_dc, old_brush);
+                DeleteObject(wedge as HGDIOBJ);
             }
         }
 
