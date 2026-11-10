@@ -2,15 +2,17 @@ use std::f32::consts::PI;
 
 use windows_sys::Win32::Foundation::COLORREF;
 use windows_sys::Win32::Graphics::Gdi::{
-    CreateBitmap, CreateCompatibleBitmap, CreateCompatibleDC, CreatePen, CreateSolidBrush,
-    DeleteDC, DeleteObject, Ellipse, GetDC, HGDIOBJ, LineTo, MoveToEx, PS_SOLID, Pie, ReleaseDC,
-    SelectObject,
+    AngleArc, CreateBitmap, CreateCompatibleBitmap, CreateCompatibleDC, CreatePen,
+    CreateSolidBrush, DeleteDC, DeleteObject, Ellipse, GetDC, HGDIOBJ, LineTo, MoveToEx, PS_SOLID,
+    Pie, ReleaseDC, SelectObject,
 };
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     CreateIconIndirect, DestroyIcon, HICON, ICONINFO,
 };
 
 pub const ICON_SIZE: i32 = 32;
+/// Span of the click-acknowledgement arc, in degrees.
+const SWEEP_ARC_DEGREES: f32 = 90.0;
 
 #[inline]
 pub fn rgb(r: u8, g: u8, b: u8) -> COLORREF {
@@ -44,7 +46,16 @@ unsafe fn select_brush(
 
 /// Builds a tray icon using GDI. Every created GDI object is deselected before
 /// deletion, preventing the per-second icon refresh from exhausting GDI handles.
-pub fn create_tray_icon(is_active: bool, is_infinite: bool, progress: f32) -> HICON {
+///
+/// `sweep` overlays a white arc that rotates around the ring, used as the
+/// tray-click acknowledgement: `0.0` starts at twelve o'clock, `1.0` has made
+/// one full turn.
+pub fn create_tray_icon(
+    is_active: bool,
+    is_infinite: bool,
+    progress: f32,
+    sweep: Option<f32>,
+) -> HICON {
     unsafe {
         let screen_dc = GetDC(std::ptr::null_mut());
         if screen_dc.is_null() {
@@ -151,6 +162,31 @@ pub fn create_tray_icon(is_active: bool, is_infinite: bool, progress: f32) -> HI
         SelectObject(mem_dc, original_brush);
         for object in objects {
             DeleteObject(object);
+        }
+
+        // The sweep arc is drawn last, over whichever state the icon is in,
+        // so the click acknowledgement also reads on the Off and Always
+        // awake icons.
+        if let Some(sweep) = sweep {
+            let sweep = sweep.clamp(0.0, 1.0);
+            let sweep_pen = CreatePen(PS_SOLID, 3, rgb(255, 255, 255));
+            if !sweep_pen.is_null() {
+                let old_pen = SelectObject(mem_dc, sweep_pen as HGDIOBJ);
+                // A quarter-turn arc riding around the ring. GDI measures
+                // angles counterclockwise from the x-axis, so twelve o'clock
+                // is -90 degrees.
+                let start = sweep * 360.0 - 90.0;
+                let _ = AngleArc(
+                    mem_dc,
+                    center,
+                    center,
+                    (radius + 2) as u32,
+                    start,
+                    -SWEEP_ARC_DEGREES,
+                );
+                SelectObject(mem_dc, old_pen);
+                DeleteObject(sweep_pen as HGDIOBJ);
+            }
         }
 
         SelectObject(mem_dc, old_bmp);

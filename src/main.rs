@@ -23,6 +23,11 @@ use windows_sys::Win32::UI::WindowsAndMessaging::{
 
 const WM_TRAYICON: u32 = WM_USER + 1;
 const TIMER_ID_SECOND: usize = 1001;
+/// Frame rate and length of the tray-click sweep animation.
+const TIMER_ID_SWEEP: usize = 1002;
+const SWEEP_FRAME_MS: u32 = 30;
+/// 16 frames at 30ms: one half-second turn of the acknowledgement arc.
+const SWEEP_FRAMES: u32 = 16;
 
 #[repr(C)]
 struct LastInputInfo {
@@ -143,6 +148,8 @@ struct TrayWindow {
     taskbar_created_message: u32,
     auto_reset_on_activity: bool,
     last_input_tick: Option<u32>,
+    /// Frame number of the tray-click sweep, while it is running.
+    sweep: Option<u32>,
 }
 
 static mut GLOBAL_WINDOW: Option<*mut TrayWindow> = None;
@@ -180,6 +187,7 @@ impl TrayWindow {
             self.app_state.current_mode.is_active(),
             self.app_state.current_mode == TimerDuration::Infinite,
             self.app_state.progress(),
+            self.sweep.map(|step| step as f32 / SWEEP_FRAMES as f32),
         );
         if new_icon.is_null() {
             return;
@@ -194,6 +202,21 @@ impl TrayWindow {
         } else {
             destroy_tray_icon(new_icon);
         }
+    }
+
+    /// One frame of the click-acknowledgement sweep; stops the timer after the
+    /// last frame and redraws the icon without the arc.
+    fn advance_sweep(&mut self) {
+        let next = self.sweep.map_or(SWEEP_FRAMES, |step| step + 1);
+        if next >= SWEEP_FRAMES {
+            self.sweep = None;
+            unsafe {
+                KillTimer(self.hwnd, TIMER_ID_SWEEP);
+            }
+        } else {
+            self.sweep = Some(next);
+        }
+        self.update_tray();
     }
 
     fn sync_timer_and_power(&mut self) {
@@ -211,6 +234,12 @@ impl TrayWindow {
     fn on_left_click(&mut self) {
         self.app_state.cycle_next();
         self.sync_timer_and_power();
+        // A click changes the timer, and the ring on its own is easy to miss.
+        // Sweep a white arc once around the icon so the click always reads.
+        self.sweep = Some(0);
+        unsafe {
+            SetTimer(self.hwnd, TIMER_ID_SWEEP, SWEEP_FRAME_MS, None);
+        }
         self.update_tray();
     }
 
@@ -412,6 +441,11 @@ unsafe extern "system" fn window_proc(
                         let tray = &mut *tray_ptr;
                         tray.handle_activity_and_tick();
                     }
+                } else if wparam == TIMER_ID_SWEEP {
+                    if let Some(tray_ptr) = GLOBAL_WINDOW {
+                        let tray = &mut *tray_ptr;
+                        tray.advance_sweep();
+                    }
                 }
                 0
             }
@@ -456,6 +490,10 @@ unsafe extern "system" fn window_proc(
                 0
             }
             WM_DESTROY => {
+                // Stop the timers before tearing down: they would otherwise
+                // fire against a freed window.
+                KillTimer(hwnd, TIMER_ID_SWEEP);
+                KillTimer(hwnd, TIMER_ID_SECOND);
                 let _ = set_keep_awake(false);
                 PostQuitMessage(0);
                 0
@@ -516,7 +554,7 @@ fn main() {
             return;
         }
 
-        let initial_icon = create_tray_icon(false, false, 0.0);
+        let initial_icon = create_tray_icon(false, false, 0.0, None);
         if initial_icon.is_null() {
             return;
         }
@@ -528,6 +566,7 @@ fn main() {
             taskbar_created_message,
             auto_reset_on_activity: false,
             last_input_tick: None,
+            sweep: None,
         });
         GLOBAL_WINDOW = Some(tray_window.as_mut());
 
