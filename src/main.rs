@@ -316,10 +316,13 @@ impl TrayWindow {
                 };
             }
 
-            let mut rows = vec![MenuEntry::header(
-                &self.app_state.status_label(),
-                caffeine_win::menu::ICON_CLOCK,
-            )];
+            let header = if self.app_state.current_mode.is_active() {
+                self.app_state.status_label()
+            } else {
+                // No timer running: rest on the Windows screen-off timeout.
+                caffeine_win::systempower::screen_off_label()
+            };
+            let mut rows = vec![MenuEntry::header(&header, caffeine_win::menu::ICON_CLOCK)];
             let durations = [
                 ("15 min", CMD_15M, TimerDuration::Minutes(15)),
                 ("30 min", CMD_30M, TimerDuration::Minutes(30)),
