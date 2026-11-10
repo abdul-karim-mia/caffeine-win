@@ -3,8 +3,8 @@ use std::f32::consts::PI;
 use windows_sys::Win32::Foundation::COLORREF;
 use windows_sys::Win32::Graphics::Gdi::{
     CreateBitmap, CreateCompatibleBitmap, CreateCompatibleDC, CreatePen, CreateSolidBrush,
-    DeleteDC, DeleteObject, Ellipse, GetDC, HGDIOBJ, LineTo, MoveToEx, PS_SOLID, Pie, ReleaseDC,
-    SelectObject,
+    DeleteDC, DeleteObject, Ellipse, GetDC, GetStockObject, HGDIOBJ, LineTo, MoveToEx, NULL_PEN,
+    PS_SOLID, Pie, ReleaseDC, SelectObject,
 };
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     CreateIconIndirect, DestroyIcon, HICON, ICONINFO,
@@ -207,7 +207,10 @@ pub fn create_tray_icon(
         let old_mask_bmp = SelectObject(mask_dc, mask_bmp as HGDIOBJ);
         let white_brush = CreateSolidBrush(rgb(255, 255, 255));
         let black_brush = CreateSolidBrush(rgb(0, 0, 0));
-        let no_pen = CreatePen(PS_SOLID, 1, rgb(0, 0, 0));
+        // A null pen, not a 1px black pen: a pen outline on the Rectangle
+        // lands on the bitmap's top and left edge pixels, which makes the mask
+        // opaque there and shows up as a stray line on the icon.
+        let no_pen = GetStockObject(NULL_PEN);
 
         if white_brush.is_null() || black_brush.is_null() || no_pen.is_null() {
             if !white_brush.is_null() {
