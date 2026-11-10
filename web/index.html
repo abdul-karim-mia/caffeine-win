@@ -50,7 +50,7 @@
         "operatingSystem": "Windows 10, Windows 11",
         "applicationCategory": "UtilitiesApplication",
         "fileSize": "115KB",
-        "softwareVersion": "0.1.0",
+        "softwareVersion": "0.2.0",
         "description": "Ultra-lightweight, zero-dependency Windows 11 system tray keep-awake utility with animated circular clock icon.",
         "offers": {
           "@type": "Offer",
@@ -66,13 +66,14 @@
         "featureList": [
           "Prevents Windows 11 PC and display sleep",
           "Animated circular clock tray icon with live pie chart countdown",
-          "One-click timer cycling: 15m, 30m, 1h, 2h, 4h, Indefinite",
+          "One-click timer cycling: 15m, 30m, 45m, 1h, 2h, 4h, Indefinite",
           "Official SetThreadExecutionState Win32 power management API",
           "Start with Windows auto-startup option",
           "Native Windows dark mode detection and dark-themed UI",
           "Auto-reset timer on mouse and keyboard activity",
           "Portable .exe or Windows installer (setup.exe)",
-          "Zero runtime dependencies (115 KB standalone native binary)"
+          "Zero runtime dependencies (115 KB standalone native binary)",
+          "x64 and ARM64 native builds (Copilot+ PC compatible)"
         ]
       },
       {
@@ -843,8 +844,119 @@
     footer a:hover {
       color: var(--accent);
     }
-  
-    
+
+    /* Download Section */
+    .download-section {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 36px;
+      margin-bottom: 80px;
+    }
+    .download-header h2 {
+      margin: 0 0 8px;
+      font-size: 1.8rem;
+    }
+    .download-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+      margin-top: 24px;
+    }
+    .dl-card {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      transition: all 0.2s;
+    }
+    .dl-card:hover {
+      border-color: rgba(56, 189, 248, 0.3);
+      transform: translateY(-2px);
+    }
+    .dl-card-badge {
+      display: inline-block;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 2px 8px;
+      border-radius: 4px;
+      margin-bottom: 12px;
+    }
+    .dl-card-badge.dl-badge-recommended {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    .dl-card-badge.dl-badge-arm64 {
+      background: rgba(56, 189, 248, 0.15);
+      color: #38bdf8;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+    }
+    .dl-card-icon {
+      font-size: 2rem;
+      margin-bottom: 12px;
+    }
+    .dl-card h3 {
+      margin: 0 0 6px;
+      font-size: 1.25rem;
+    }
+    .dl-card-desc {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      margin-bottom: 16px;
+    }
+    .dl-card-divider {
+      height: 1px;
+      background: var(--card-border);
+      margin: 16px 0;
+    }
+    .dl-card-btn {
+      display: block;
+      width: 100%;
+      padding: 12px 16px;
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.03);
+      color: var(--text);
+      text-decoration: none;
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+      transition: all 0.2s;
+      text-align: left;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .dl-card-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+    .dl-card-btn-outline {
+      background: transparent;
+      border-style: dashed;
+    }
+    .dl-card-btn-outline:hover {
+      background: rgba(255, 255, 255, 0.03);
+    }
+    .dl-card-btn svg {
+      flex-shrink: 0;
+    }
+    .dl-card-highlight {
+      border-color: var(--accent) !important;
+      box-shadow: 0 0 20px rgba(56, 189, 248, 0.15);
+    }
+    .dl-footnote {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      border-top: 1px solid var(--card-border);
+      padding-top: 16px;
+    }
+
     /* Responsive layout improvements */
     html {
       scroll-padding-top: 100px;
@@ -1263,6 +1375,7 @@
           <span class="badge">☕ Zero Dependencies</span>
           <span class="badge" id="starBadge" style="display:none">⭐ <span id="starCount">–</span> stars</span>
           <span class="badge" id="dlBadge" style="display:none">⬇️ <span id="dlCount">–</span> downloads</span>
+          <span class="badge">🔋 ARM64 Native</span>
         </div>
 
         <h1>Keep your PC & screen awake.<br>Clean. Minimal. Smart.</h1>
@@ -1271,18 +1384,24 @@
         </p>
 
         <div class="cta-group">
-          <a href="https://github.com/abdul-karim-mia/caffeine-win/releases/download/latest/caffeine-win.exe" class="btn btn-primary">
+          <a id="dlBtn" href="#" class="btn btn-primary">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
               <polyline points="7 10 12 15 17 10"></polyline>
               <line x1="12" y1="15" x2="12" y2="3"></line>
             </svg>
-            Download .exe (115 KB)
+            <span id="dlBtnLabel">Detecting your system…</span>
+            <span id="dlBtnArch" style="font-size:0.85em;opacity:0.85"></span>
           </a>
           <a href="https://github.com/abdul-karim-mia/caffeine-win" target="_blank" class="btn btn-secondary">
             View on GitHub
           </a>
         </div>
+
+        <!-- Auto-detected download callout -->
+        <p id="dlDetectNote" style="margin-top:10px;font-size:0.9rem;color:var(--text-muted);display:none">
+          Detected <span id="dlDetectArch"></span> — download ready below.
+        </p>
       </section>
 
       <!-- Sleep Simulation Notice Banner -->
@@ -1292,6 +1411,51 @@
         </div>
         <button class="sim-quick-btn" id="quickTestBtn">Set 10s Demo Timer</button>
       </div>
+
+      <!-- Download Options: auto-detect + manual selection -->
+      <section class="download-section" id="downloads">
+        <div class="download-header">
+          <h2>Download</h2>
+          <p id="dlAutoNote" style="margin:0;font-size:0.95rem;color:var(--text-muted)">
+            Choose your Windows architecture:
+          </p>
+        </div>
+        <div class="download-grid">
+          <div class="dl-card dl-card-x64" id="dlCardX64">
+            <div class="dl-card-badge">Recommended</div>
+            <div class="dl-card-icon">💻</div>
+            <h3>Windows x64</h3>
+            <p class="dl-card-desc">Most desktops and laptops (Intel/AMD 64-bit)</p>
+            <div class="dl-card-divider"></div>
+            <a class="dl-card-btn" id="dlBtnX64Portable">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Portable .exe
+            </a>
+            <a class="dl-card-btn dl-card-btn-outline" id="dlBtnX64Setup">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><path d="M12 10L16 14M16 14L12 18M16 14L8 14"/></svg>
+              Setup Installer
+            </a>
+          </div>
+          <div class="dl-card dl-card-arm64" id="dlCardArm64">
+            <div class="dl-card-badge">ARM64</div>
+            <div class="dl-card-icon">🔋</div>
+            <h3>Windows ARM64</h3>
+            <p class="dl-card-desc">Copilot+ PCs, Surface Pro X, Lenovo ThinkPad X13s</p>
+            <div class="dl-card-divider"></div>
+            <a class="dl-card-btn" id="dlBtnArm64Portable">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Portable .exe
+            </a>
+            <a class="dl-card-btn dl-card-btn-outline" id="dlBtnArm64Setup">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><path d="M12 10L16 14M16 14L12 18M16 14L8 14"/></svg>
+              Setup Installer
+            </a>
+          </div>
+        </div>
+        <p class="dl-footnote" style="margin-top:16px;font-size:0.85rem;color:var(--text-muted)">
+          Not sure? Most Windows PCs are x64. ARM64 is for Snapdragon Copilot+ PCs and Surface devices with ARM processors.
+        </p>
+      </section>
 
       <!-- Interactive Simulator -->
       <section class="simulator-card">
@@ -1806,6 +1970,96 @@
     }
     updateClock();
     setInterval(updateClock, 30000);
+  </script>
+
+  <script>
+    // System detection + auto-select download
+    (function () {
+      const dlBtn = document.getElementById('dlBtn');
+      const dlBtnLabel = document.getElementById('dlBtnLabel');
+      const dlBtnArch = document.getElementById('dlBtnArch');
+      const dlDetectNote = document.getElementById('dlDetectNote');
+      const dlDetectArch = document.getElementById('dlDetectArch');
+
+      const cards = {
+        x64: document.getElementById('dlCardX64'),
+        arm64: document.getElementById('dlCardArm64'),
+      };
+
+      const links = {
+        x64Portable: document.getElementById('dlBtnX64Portable'),
+        x64Setup: document.getElementById('dlBtnX64Setup'),
+        arm64Portable: document.getElementById('dlBtnArm64Portable'),
+        arm64Setup: document.getElementById('dlBtnArm64Setup'),
+      };
+
+      const RELEASE_ROOT = 'https://github.com/abdul-karim-mia/caffeine-win/releases/download/latest';
+      const ASSETS = {
+        x64Portable: RELEASE_ROOT + '/caffeine-win.exe',
+        x64Setup: RELEASE_ROOT + '/caffeine-win-setup.exe',
+        arm64Portable: RELEASE_ROOT + '/caffeine-win-arm64.exe',
+        arm64Setup: RELEASE_ROOT + '/caffeine-win-setup-arm64.exe',
+      };
+
+      function detectArch() {
+        const ua = navigator.userAgent || '';
+        const platform = navigator.platform || '';
+        const uaData = navigator.userAgentData;
+
+        if (uaData && uaData.platform) {
+          const p = uaData.platform.toLowerCase();
+          if (p === 'windows') {
+            if (/arm64|aarch64/.test(ua)) return 'arm64';
+            if (/wow64|win64|x64/.test(ua)) return 'x64';
+            return 'x64';
+          }
+          if (p === 'arm' || p === 'arm64') return 'arm64';
+        }
+
+        if (/arm64|aarch64/.test(ua)) return 'arm64';
+        if (/win64|wow64|x64_64/.test(ua)) return 'x64';
+        if (/win32|wow32|x86/.test(ua)) return 'x64';
+        if (/arm/.test(ua)) return 'arm64';
+
+        const pl = platform.toLowerCase();
+        if (pl.includes('arm64') || pl.includes('aarch64')) return 'arm64';
+        if (pl.includes('win64') || pl.includes('x64')) return 'x64';
+        if (pl.includes('win32') || pl.includes('x86')) return 'x64';
+
+        return 'x64';
+      }
+
+      function applyArch(arch) {
+        Object.values(cards).forEach(c => c.classList.remove('dl-card-highlight'));
+        if (cards[arch]) cards[arch].classList.add('dl-card-highlight');
+
+        const portableKey = arch + 'Portable';
+        if (links[portableKey]) {
+          dlBtn.href = ASSETS[portableKey];
+          dlBtnLabel.textContent = arch === 'arm64' ? 'Download ARM64 .exe' : 'Download .exe';
+          dlBtnArch.textContent = arch === 'arm64' ? ' (ARM64, ~120 KB)' : ' (x64, ~115 KB)';
+        }
+        if (links.x64Portable) links.x64Portable.href = ASSETS.x64Portable;
+        if (links.x64Setup) links.x64Setup.href = ASSETS.x64Setup;
+        if (links.arm64Portable) links.arm64Portable.href = ASSETS.arm64Portable;
+        if (links.arm64Setup) links.arm64Setup.href = ASSETS.arm64Setup;
+
+        if (dlDetectNote) {
+          dlDetectNote.style.display = '';
+          dlDetectArch.textContent = arch === 'arm64' ? 'Windows ARM64' : 'Windows x64';
+        }
+      }
+
+      const arch = detectArch();
+      applyArch(arch);
+
+      if (navigator.userAgentData && !navigator.userAgentData.platform) {
+        navigator.userAgentData.getHighEntropyValues(['platform', 'architecture']).then(res => {
+          const arch2 = res.architecture === 'arm64' ? 'arm64' : 'x64';
+          applyArch(arch2);
+        }).catch(() => {});
+      }
+    })();
   </script>
 
   <script>
