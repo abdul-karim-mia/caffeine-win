@@ -115,13 +115,16 @@ pub fn create_tray_icon(
         let bottom = center + radius;
 
         if !is_active {
-            select_pen(mem_dc, rgb(120, 120, 120), 2, &mut objects);
-            select_brush(mem_dc, rgb(40, 40, 40), &mut objects);
+            // Idle: a dark disc inside a white ring, so the outline reads on a
+            // dark taskbar and the disc reads on a light one. Grey on either
+            // side disappears against the matching taskbar colour.
+            select_pen(mem_dc, rgb(235, 235, 235), 2, &mut objects);
+            select_brush(mem_dc, rgb(45, 45, 45), &mut objects);
             Ellipse(mem_dc, left, top, right, bottom);
 
-            select_pen(mem_dc, rgb(160, 160, 160), 1, &mut objects);
-            select_brush(mem_dc, rgb(160, 160, 160), &mut objects);
-            Ellipse(mem_dc, center - 2, center - 2, center + 2, center + 2);
+            select_pen(mem_dc, rgb(235, 235, 235), 1, &mut objects);
+            select_brush(mem_dc, rgb(235, 235, 235), &mut objects);
+            Ellipse(mem_dc, center - 3, center - 3, center + 3, center + 3);
         } else if is_infinite {
             select_pen(mem_dc, rgb(0, 220, 255), 2, &mut objects);
             select_brush(mem_dc, rgb(0, 80, 120), &mut objects);
@@ -219,9 +222,6 @@ pub fn create_tray_icon(
             if !black_brush.is_null() {
                 DeleteObject(black_brush as HGDIOBJ);
             }
-            if !no_pen.is_null() {
-                DeleteObject(no_pen as HGDIOBJ);
-            }
             SelectObject(mask_dc, old_mask_bmp);
             DeleteDC(mask_dc);
             DeleteObject(color_bmp as HGDIOBJ);
@@ -241,7 +241,7 @@ pub fn create_tray_icon(
         SelectObject(mask_dc, original_mask_brush);
         DeleteObject(white_brush as HGDIOBJ);
         DeleteObject(black_brush as HGDIOBJ);
-        DeleteObject(no_pen as HGDIOBJ);
+        // The null pen is a stock object: it must not be deleted.
         SelectObject(mask_dc, old_mask_bmp);
         DeleteDC(mask_dc);
 
