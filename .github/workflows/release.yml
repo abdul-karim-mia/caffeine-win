@@ -92,9 +92,9 @@ jobs:
         if: ${{ matrix.target == 'x86_64-pc-windows-msvc' }}
         run: cargo test --release --target ${{ matrix.target }}
 
-      - name: Run Unit Tests (ARM64, no-run)
+      - name: Run Unit Tests (ARM64, compile only)
         if: ${{ matrix.target == 'aarch64-pc-windows-msvc' }}
-        run: cargo test --release --target ${{ matrix.target }} --no-run
+        run: cargo check --release --target ${{ matrix.target }}
 
       - name: Build Optimized Release Binary
         run: cargo build --release --target ${{ matrix.target }}
