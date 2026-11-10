@@ -17,7 +17,7 @@ use windows_sys::Win32::Graphics::Dwm::{
 use windows_sys::Win32::Graphics::Gdi::{
     BeginPaint, BitBlt, CreateCompatibleBitmap, CreateCompatibleDC, CreateFontW, CreateSolidBrush,
     DT_CENTER, DT_LEFT, DT_SINGLELINE, DT_VCENTER, DeleteDC, DeleteObject, DrawTextW, EndPaint,
-    FW_NORMAL, FillRect, GetMonitorInfoW, GetTextExtentPoint32W, HBRUSH, HDC, HFONT, HRGN,
+    FW_NORMAL, FillRect, GetMonitorInfoW, GetTextExtentPoint32W, HBRUSH, HDC, HFONT,
     InvalidateRect, MONITOR_DEFAULTTONEAREST, MONITORINFO, MonitorFromRect, PAINTSTRUCT, SRCCOPY,
     SelectObject, SetBkMode, SetTextColor, TRANSPARENT,
 };
