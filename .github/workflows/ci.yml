@@ -11,9 +11,13 @@ env:
 
 jobs:
   check-and-test:
-    name: Build & Test (Windows)
+    name: Build & Test (${{ matrix.target }})
     runs-on: windows-latest
-
+    strategy:
+      matrix:
+        target:
+          - x86_64-pc-windows-msvc
+          - aarch64-pc-windows-msvc
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -24,16 +28,25 @@ jobs:
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
 
+      - name: Add target ${{ matrix.target }}
+        run: rustup target add ${{ matrix.target }}
+
+      - name: Setup MSVC dev cmd (ARM64 linker)
+        if: ${{ matrix.target == 'aarch64-pc-windows-msvc' }}
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: amd64_arm64
+
       - name: Run unit tests
-        run: cargo test --verbose
+        run: cargo test --verbose --target ${{ matrix.target }}
 
       - name: Build release binary
-        run: cargo build --release --verbose
+        run: cargo build --release --verbose --target ${{ matrix.target }}
 
       - name: Verify release executable
         shell: pwsh
         run: |
-          $exe = "target\release\caffeine-win.exe"
+          $exe = "target\${{ matrix.target }}\release\caffeine-win.exe"
           if (Test-Path $exe) {
             $size = (Get-Item $exe).Length
             Write-Host "Success! Executable size: $size bytes"
@@ -43,6 +56,7 @@ jobs:
           }
 
       - name: Compile Inno Setup Installer
+        if: ${{ matrix.target == 'x86_64-pc-windows-msvc' }}
         uses: Minionguyjpro/Inno-Setup-Action@v1.2.9
         with:
           path: installer.iss

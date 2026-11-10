@@ -19,7 +19,11 @@ jobs:
   publish:
     name: Build & Release Executable
     runs-on: windows-latest
-
+    strategy:
+      matrix:
+        target:
+          - x86_64-pc-windows-msvc
+          - aarch64-pc-windows-msvc
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -32,6 +36,15 @@ jobs:
 
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
+
+      - name: Add target ${{ matrix.target }}
+        run: rustup target add ${{ matrix.target }}
+
+      - name: Setup MSVC dev cmd (ARM64 linker)
+        if: ${{ matrix.target == 'aarch64-pc-windows-msvc' }}
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: amd64_arm64
 
       - name: Determine Release Tag & Version
         id: versioning
@@ -76,10 +89,10 @@ jobs:
           }
 
       - name: Run Unit Tests
-        run: cargo test --release
+        run: cargo test --release --target ${{ matrix.target }}
 
       - name: Build Optimized Release Binary
-        run: cargo build --release
+        run: cargo build --release --target ${{ matrix.target }}
 
       - name: Update Version in Installer Script
         shell: pwsh
@@ -88,43 +101,56 @@ jobs:
           $installerContent = $installerContent -replace 'MyAppVersion = "[^"]*"', "MyAppVersion = `"$env:RELEASE_VERSION`""
           Set-Content -Path installer.iss -Value $installerContent
 
-      - name: Compile Inno Setup Installer
+      - name: Compile x64 Inno Setup Installer
+        if: ${{ matrix.target == 'x86_64-pc-windows-msvc' }}
         uses: Minionguyjpro/Inno-Setup-Action@v1.2.9
         with:
           path: installer.iss
+
+      - name: Compile ARM64 Inno Setup Installer
+        if: ${{ matrix.target == 'aarch64-pc-windows-msvc' }}
+        uses: Minionguyjpro/Inno-Setup-Action@v1.2.9
+        with:
+          path: installer.arm64.iss
 
       - name: Package Release Assets & Compute Checksums
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path dist
 
-          # Copy portable artifacts
-          Copy-Item target\release\caffeine-win.exe -Destination dist\caffeine-win.exe
+          $arch = if ("${{ matrix.target }}" -eq "x86_64-pc-windows-msvc") { "x64" } else { "arm64" }
+          $srcExe = "target\${{ matrix.target }}\release\caffeine-win.exe"
+
+          # Copy portable artifact
+          $exeName = if ($arch -eq "x64") { "caffeine-win.exe" } else { "caffeine-win-arm64.exe" }
+          Copy-Item $srcExe -Destination "dist\$exeName"
           Copy-Item README.md -Destination dist\README.md
           Copy-Item LICENSE -Destination dist\LICENSE.txt
 
           # Create Zip distribution
-          Compress-Archive -Path dist\* -DestinationPath "dist\caffeine-win-windows-x64.zip"
+          $zipName = "caffeine-win-windows-$arch.zip"
+          Compress-Archive -Path dist\* -DestinationPath "dist\$zipName"
 
           # Compute SHA-256 hashes
-          $exeHash = (Get-FileHash -Path dist\caffeine-win.exe -Algorithm SHA256).Hash
-          $zipHash = (Get-FileHash -Path "dist\caffeine-win-windows-x64.zip" -Algorithm SHA256).Hash
-          $setupPath = "dist\caffeine-win-setup.exe"
-          $setupHash = if (Test-Path $setupPath) { (Get-FileHash -Path $setupPath -Algorithm SHA256).Hash } else { "" }
+          $exeHash = (Get-FileHash -Path "dist\$exeName" -Algorithm SHA256).Hash
+          $zipHash = (Get-FileHash -Path "dist\$zipName" -Algorithm SHA256).Hash
+          "$exeHash  $exeName" | Out-File -Encoding ascii "dist\$exeName.sha256"
+          "$zipHash  $zipName" | Out-File -Encoding ascii "dist\$zipName.sha256"
 
-          "$exeHash  caffeine-win.exe" | Out-File -Encoding ascii dist\caffeine-win.exe.sha256
-          "$zipHash  caffeine-win-windows-x64.zip" | Out-File -Encoding ascii dist\caffeine-win-windows-x64.zip.sha256
+          # Setup installer (per-arch artifact)
+          $setupName = if ($arch -eq "x64") { "caffeine-win-setup.exe" } else { "caffeine-win-setup-arm64.exe" }
+          $setupPath = "dist\$setupName"
+          $setupHash = if (Test-Path $setupPath) { (Get-FileHash -Path $setupPath -Algorithm SHA256).Hash } else { "" }
           if (Test-Path $setupPath) {
-              "$setupHash  caffeine-win-setup.exe" | Out-File -Encoding ascii dist\caffeine-win-setup.exe.sha256
+              "$setupHash  $setupName" | Out-File -Encoding ascii "dist\$setupName.sha256"
           }
 
-          Write-Host "Assets packaged successfully:"
+          Write-Host "Assets packaged successfully for $arch:"
           Get-ChildItem dist | Select-Object Name, Length
 
       - name: Generate Release Notes
         shell: pwsh
         run: |
-          # Build notes from commit history: full log between tags (auto-notes only list PRs, which this repo never uses)
           $tag = $env:RELEASE_TAG
           $tags = git for-each-ref "refs/tags/v*" --sort=-v:refname --format="%(refname:short)"
           $prev = $null
@@ -147,7 +173,8 @@ jobs:
           Write-Host "--- RELEASE_NOTES.md ---"
           Get-Content RELEASE_NOTES.md
 
-      - name: Publish GitHub Release
+      - name: Publish GitHub Release (x64)
+        if: ${{ matrix.target == 'x86_64-pc-windows-msvc' }}
         uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ env.RELEASE_TAG }}
@@ -155,11 +182,31 @@ jobs:
           body_path: RELEASE_NOTES.md
           files: |
             dist/caffeine-win.exe
-            dist/caffeine-win-windows-x64.zip
-            dist/caffeine-win-setup.exe
             dist/caffeine-win.exe.sha256
+            dist/caffeine-win-windows-x64.zip
             dist/caffeine-win-windows-x64.zip.sha256
+            dist/caffeine-win-setup.exe
             dist/caffeine-win-setup.exe.sha256
+          prerelease: ${{ env.IS_PRERELEASE == 'true' }}
+          draft: false
+          generate_release_notes: true
+          make_latest: true
+          overwrite_files: true
+
+      - name: Publish GitHub Release (ARM64)
+        if: ${{ matrix.target == 'aarch64-pc-windows-msvc' }}
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          name: ${{ env.RELEASE_NAME }}
+          body_path: RELEASE_NOTES.md
+          files: |
+            dist/caffeine-win-arm64.exe
+            dist/caffeine-win-arm64.exe.sha256
+            dist/caffeine-win-windows-arm64.zip
+            dist/caffeine-win-windows-arm64.zip.sha256
+            dist/caffeine-win-setup-arm64.exe
+            dist/caffeine-win-setup-arm64.exe.sha256
           prerelease: ${{ env.IS_PRERELEASE == 'true' }}
           draft: false
           generate_release_notes: true
