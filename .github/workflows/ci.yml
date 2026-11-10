@@ -37,7 +37,7 @@ jobs:
 
       - name: Run unit tests (ARM64, compile only)
         if: ${{ matrix.target == 'aarch64-pc-windows-msvc' }}
-        run: cargo check --verbose --release --target ${{ matrix.target }}
+        run: cargo check --verbose --target ${{ matrix.target }}
 
       - name: Build release binary
         run: cargo build --release --verbose --target ${{ matrix.target }}
