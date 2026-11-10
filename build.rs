@@ -12,6 +12,15 @@ fn main() {
     println!("cargo:rerun-if-changed=app.manifest");
     println!("cargo:rerun-if-changed=build.rs");
 
+    // rc.exe is an x64-only tool: it can't produce ARM64 resources.
+    // Skip manifest embedding for ARM64 targets.
+    if let Ok(arch) = std::env::var("CARGO_CFG_TARGET_ARCH") {
+        if arch == "aarch64" {
+            println!("cargo:warning=skipping rc.exe for ARM64 target; app.manifest was not embedded");
+            return;
+        }
+    }
+
     let mut rc = rc_candidates()
         .into_iter()
         .find(|dir| dir.join("rc.exe").try_exists().unwrap_or(false));
