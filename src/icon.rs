@@ -55,6 +55,7 @@ pub fn create_tray_icon(
     is_infinite: bool,
     progress: f32,
     sweep: Option<f32>,
+    dark: bool,
 ) -> HICON {
     unsafe {
         let screen_dc = GetDC(std::ptr::null_mut());
@@ -115,15 +116,20 @@ pub fn create_tray_icon(
         let bottom = center + radius;
 
         if !is_active {
-            // Idle: a dark disc inside a white ring, so the outline reads on a
-            // dark taskbar and the disc reads on a light one. Grey on either
-            // side disappears against the matching taskbar colour.
-            select_pen(mem_dc, rgb(235, 235, 235), 3, &mut objects);
-            select_brush(mem_dc, rgb(45, 45, 45), &mut objects);
+            // Idle: the ring and the centre dot contrast with the taskbar and
+            // with the disc, so the icon inverts with the system theme. A grey
+            // ring disappears against the matching taskbar colour.
+            let (ring, fill, dot) = if dark {
+                (rgb(235, 235, 235), rgb(45, 45, 45), rgb(235, 235, 235))
+            } else {
+                (rgb(40, 40, 40), rgb(228, 228, 228), rgb(40, 40, 40))
+            };
+            select_pen(mem_dc, ring, 3, &mut objects);
+            select_brush(mem_dc, fill, &mut objects);
             Ellipse(mem_dc, left, top, right, bottom);
 
-            select_pen(mem_dc, rgb(235, 235, 235), 1, &mut objects);
-            select_brush(mem_dc, rgb(235, 235, 235), &mut objects);
+            select_pen(mem_dc, dot, 1, &mut objects);
+            select_brush(mem_dc, dot, &mut objects);
             Ellipse(mem_dc, center - 3, center - 3, center + 3, center + 3);
         } else if is_infinite {
             select_pen(mem_dc, rgb(0, 220, 255), 2, &mut objects);

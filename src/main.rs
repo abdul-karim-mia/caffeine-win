@@ -188,6 +188,7 @@ impl TrayWindow {
             self.app_state.current_mode == TimerDuration::Infinite,
             self.app_state.progress(),
             self.sweep.map(|step| step as f32 / SWEEP_FRAMES as f32),
+            unsafe { SYSTEM_DARK },
         );
         if new_icon.is_null() {
             return;
@@ -433,9 +434,13 @@ unsafe extern "system" fn window_proc(
                 0
             }
             WM_SETTINGCHANGE => {
-                // Windows switched dark/light while the app was running: re-read
-                // the theme so the next menu open follows it.
+                // Windows switched dark/light while the app was running:
+                // re-read the theme so the menu and the idle icon follow it.
                 init_system_dark();
+                if let Some(tray_ptr) = GLOBAL_WINDOW {
+                    let tray = &mut *tray_ptr;
+                    tray.update_tray();
+                }
                 0
             }
             WM_TIMER => {
@@ -557,7 +562,7 @@ fn main() {
             return;
         }
 
-        let initial_icon = create_tray_icon(false, false, 0.0, None);
+        let initial_icon = create_tray_icon(false, false, 0.0, None, system_prefers_dark_mode());
         if initial_icon.is_null() {
             return;
         }
