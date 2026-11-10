@@ -1,4 +1,3 @@
 [target.aarch64-pc-windows-msvc]
 # link.exe is provided by the msvc-dev-cmd (amd64_arm64) step on CI.
 linker = "link.exe"
-linker-flavor = "msvc"
