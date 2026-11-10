@@ -56,7 +56,7 @@ jobs:
             $tag = "${{ github.ref_name }}"
             Write-Host "Triggered by tag: $tag"
             echo "RELEASE_TAG=$tag" >> $env:GITHUB_ENV
-            echo "RELEASE_VERSION=${{ github.ref_name }}" >> $env:GITHUB_ENV
+            echo "RELEASE_VERSION=$tag" >> $env:GITHUB_ENV
             echo "IS_PRERELEASE=false" >> $env:GITHUB_ENV
             echo "RELEASE_NAME=Caffeine for Windows $tag" >> $env:GITHUB_ENV
             exit 0
@@ -100,26 +100,6 @@ jobs:
       - name: Build Optimized Release Binary
         run: cargo build --release --target ${{ matrix.target }}
 
-      - name: Update Version in Installer Script
-        shell: pwsh
-        run: |
-          $installerContent = Get-Content installer.iss -Raw
-          $installerContent = $installerContent -replace 'MyAppVersion = "[^"]*"', "MyAppVersion = `"$env:RELEASE_VERSION`""
-          Set-Content -Path installer.iss -Value $installerContent
-
-      - name: Compile x64 Inno Setup Installer
-        if: ${{ matrix.target == 'x86_64-pc-windows-msvc' }}
-        uses: Minionguyjpro/Inno-Setup-Action@v1.2.9
-        with:
-          path: installer.iss
-
-      - name: Compile ARM64 Inno Setup Installer
-        if: ${{ matrix.target == 'aarch64-pc-windows-msvc' }}
-        continue-on-error: true
-        uses: Minionguyjpro/Inno-Setup-Action@v1.2.9
-        with:
-          path: installer.arm64.iss
-
       - name: Package Release Assets & Compute Checksums
         shell: pwsh
         run: |
@@ -143,14 +123,6 @@ jobs:
           $zipHash = (Get-FileHash -Path "dist\$zipName" -Algorithm SHA256).Hash
           "$exeHash  $exeName" | Out-File -Encoding ascii "dist\$exeName.sha256"
           "$zipHash  $zipName" | Out-File -Encoding ascii "dist\$zipName.sha256"
-
-          # Setup installer (per-arch artifact)
-          $setupName = if ($arch -eq "x64") { "caffeine-win-setup.exe" } else { "caffeine-win-setup-arm64.exe" }
-          $setupPath = "dist\$setupName"
-          $setupHash = if (Test-Path $setupPath) { (Get-FileHash -Path $setupPath -Algorithm SHA256).Hash } else { "" }
-          if (Test-Path $setupPath) {
-              "$setupHash  $setupName" | Out-File -Encoding ascii "dist\$setupName.sha256"
-          }
 
           Write-Host "Assets packaged successfully for $arch:"
           Get-ChildItem dist | Select-Object Name, Length
@@ -192,8 +164,6 @@ jobs:
             dist/caffeine-win.exe.sha256
             dist/caffeine-win-windows-x64.zip
             dist/caffeine-win-windows-x64.zip.sha256
-            dist/caffeine-win-setup.exe
-            dist/caffeine-win-setup.exe.sha256
           prerelease: ${{ env.IS_PRERELEASE == 'true' }}
           draft: false
           generate_release_notes: true
@@ -212,8 +182,6 @@ jobs:
             dist/caffeine-win-arm64.exe.sha256
             dist/caffeine-win-windows-arm64.zip
             dist/caffeine-win-windows-arm64.zip.sha256
-            dist/caffeine-win-setup-arm64.exe
-            dist/caffeine-win-setup-arm64.exe.sha256
           prerelease: ${{ env.IS_PRERELEASE == 'true' }}
           draft: false
           generate_release_notes: true
