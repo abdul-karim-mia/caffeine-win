@@ -37,8 +37,13 @@ jobs:
         with:
           arch: amd64_arm64
 
-      - name: Run unit tests
+      - name: Run unit tests (x64)
+        if: ${{ matrix.target == 'x86_64-pc-windows-msvc' }}
         run: cargo test --verbose --target ${{ matrix.target }}
+
+      - name: Run unit tests (ARM64, no-run)
+        if: ${{ matrix.target == 'aarch64-pc-windows-msvc' }}
+        run: cargo test --verbose --target ${{ matrix.target }} --no-run
 
       - name: Build release binary
         run: cargo build --release --verbose --target ${{ matrix.target }}

@@ -88,8 +88,13 @@ jobs:
             echo "RELEASE_NAME=Caffeine for Windows (Latest Build)" >> $env:GITHUB_ENV
           }
 
-      - name: Run Unit Tests
+      - name: Run Unit Tests (x64)
+        if: ${{ matrix.target == 'x86_64-pc-windows-msvc' }}
         run: cargo test --release --target ${{ matrix.target }}
+
+      - name: Run Unit Tests (ARM64, no-run)
+        if: ${{ matrix.target == 'aarch64-pc-windows-msvc' }}
+        run: cargo test --release --target ${{ matrix.target }} --no-run
 
       - name: Build Optimized Release Binary
         run: cargo build --release --target ${{ matrix.target }}
