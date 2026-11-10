@@ -5,7 +5,7 @@
 #define MyAppVersion "0.2.0"
 #define MyAppPublisher "Abdul Karim Mia"
 #define MyAppURL "https://github.com/abdul-karim-mia/caffeine-win"
-#define MyAppExecutable "caffeine-win-arm64.exe"
+#define MyAppExecutable "caffeine-win.exe"
 
 [Setup]
 AppId={{D8F7E9A0-C1B2-4A3F-8C5D-1E2F3A4B5C6D}}
