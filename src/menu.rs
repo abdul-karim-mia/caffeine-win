@@ -66,6 +66,8 @@ const ITEM_HEIGHT: i32 = 30;
 const SEPARATOR_HEIGHT: i32 = 9;
 const MENU_PADDING_Y: i32 = 5;
 const MIN_WIDTH: i32 = 190;
+/// Daylight between the tray icons and the menu edge, in 96dpi pixels.
+const MENU_ANCHOR_GAP: i32 = 4;
 
 /// Segoe Fluent Icons code points (the font Explorer uses for its menus).
 pub const ICON_POWER: u16 = 0xE7E8;
@@ -774,11 +776,13 @@ unsafe extern "system" fn menu_wndproc(
 
 /// Menu position: above the icon when it fits, otherwise below, clamped to
 /// the monitor work area so multi-monitor setups never clip it.
-fn menu_position(anchor: RECT, work: RECT, width: i32, height: i32) -> (i32, i32) {
+fn menu_position(anchor: RECT, work: RECT, width: i32, height: i32, gap: i32) -> (i32, i32) {
     let max_x = (work.right - width).max(work.left);
     let x = (anchor.right - width).clamp(work.left, max_x);
-    let above = anchor.top - height;
-    let below = anchor.bottom;
+    // A few pixels of daylight between the tray icons and the menu, the way
+    // Explorer's own menus float clear of the taskbar.
+    let above = anchor.top - height - gap;
+    let below = anchor.bottom + gap;
     let max_y = (work.bottom - height).max(work.top);
     let y = if above >= work.top {
         above
@@ -1017,7 +1021,13 @@ pub fn show_tray_menu(
                 bottom: i32::MAX / 2,
             }
         };
-        let (x, y) = menu_position(anchor, work, width, height);
+        let (x, y) = menu_position(
+            anchor,
+            work,
+            width,
+            height,
+            mulround(MENU_ANCHOR_GAP, menu.scale),
+        );
 
         // Start fully invisible; the animation ramps the alpha up to
         // FINAL_ALPHA so the blurred backdrop fades in with the slide.
