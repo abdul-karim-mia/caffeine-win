@@ -103,10 +103,12 @@ jobs:
       - name: Package Release Assets & Compute Checksums
         shell: pwsh
         run: |
+          $ErrorActionPreference = 'Stop'
           New-Item -ItemType Directory -Force -Path dist
 
           $arch = if ("${{ matrix.target }}" -eq "x86_64-pc-windows-msvc") { "x64" } else { "arm64" }
           $srcExe = "target\${{ matrix.target }}\release\caffeine-win.exe"
+          Write-Output "arch=$arch srcExe=$srcExe exists=$(Test-Path $srcExe)"
 
           # Copy portable artifact
           $exeName = if ($arch -eq "x64") { "caffeine-win.exe" } else { "caffeine-win-arm64.exe" }
@@ -124,7 +126,7 @@ jobs:
           "$exeHash  $exeName" | Out-File -Encoding ascii "dist\$exeName.sha256"
           "$zipHash  $zipName" | Out-File -Encoding ascii "dist\$zipName.sha256"
 
-          Write-Host "Assets packaged successfully for $arch:"
+          Write-Output "Assets packaged successfully for $arch"
           Get-ChildItem dist | Select-Object Name, Length
 
       - name: Generate Release Notes
