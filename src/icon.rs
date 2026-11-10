@@ -118,7 +118,7 @@ pub fn create_tray_icon(
             // Idle: a dark disc inside a white ring, so the outline reads on a
             // dark taskbar and the disc reads on a light one. Grey on either
             // side disappears against the matching taskbar colour.
-            select_pen(mem_dc, rgb(235, 235, 235), 2, &mut objects);
+            select_pen(mem_dc, rgb(235, 235, 235), 3, &mut objects);
             select_brush(mem_dc, rgb(45, 45, 45), &mut objects);
             Ellipse(mem_dc, left, top, right, bottom);
 
@@ -233,8 +233,11 @@ pub fn create_tray_icon(
         let original_mask_pen = SelectObject(mask_dc, no_pen as HGDIOBJ);
         windows_sys::Win32::Graphics::Gdi::Rectangle(mask_dc, 0, 0, ICON_SIZE + 1, ICON_SIZE + 1);
 
-        SelectObject(mask_dc, black_brush as HGDIOBJ);
-        Ellipse(mask_dc, left, top, right, bottom);
+        SelectObject(mask_dc, black_brush);
+        // The mask is inflated past the drawn disc so the outer half of the
+        // ring's stroke survives: an ellipse on the same path would clip it,
+        // and the ring is what carries the icon on a dark taskbar.
+        Ellipse(mask_dc, left - 2, top - 2, right + 2, bottom + 2);
 
         // Restore original selections before deleting temporary GDI objects.
         SelectObject(mask_dc, original_mask_pen);
