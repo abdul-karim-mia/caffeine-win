@@ -25,10 +25,12 @@ unsafe fn select_pen(
     width: i32,
     objects: &mut Vec<HGDIOBJ>,
 ) {
-    let pen = CreatePen(PS_SOLID, width, color);
+    let pen = unsafe { CreatePen(PS_SOLID, width, color) };
     if !pen.is_null() {
         objects.push(pen as HGDIOBJ);
-        SelectObject(dc, pen as HGDIOBJ);
+        unsafe {
+            SelectObject(dc, pen as HGDIOBJ);
+        }
     }
 }
 
@@ -37,10 +39,12 @@ unsafe fn select_brush(
     color: COLORREF,
     objects: &mut Vec<HGDIOBJ>,
 ) {
-    let brush = CreateSolidBrush(color);
+    let brush = unsafe { CreateSolidBrush(color) };
     if !brush.is_null() {
         objects.push(brush as HGDIOBJ);
-        SelectObject(dc, brush as HGDIOBJ);
+        unsafe {
+            SelectObject(dc, brush as HGDIOBJ);
+        }
     }
 }
 

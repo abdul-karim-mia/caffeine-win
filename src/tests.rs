@@ -1,6 +1,13 @@
 use crate::state::{AppState, TimerDuration, format_hms};
 
 #[test]
+fn test_is_packaged_is_false_outside_msix() {
+    // cargo test runs unpackaged; inside an MSIX package is_packaged() takes the
+    // StartupTask path in the tray menu instead of the registry Run key.
+    assert!(!crate::autostart::is_packaged());
+}
+
+#[test]
 fn test_format_hms() {
     assert_eq!(format_hms(0), "0:00");
     assert_eq!(format_hms(9), "0:09");

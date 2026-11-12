@@ -2,7 +2,7 @@
 ; Caffeine for Windows installer
 
 #define MyAppName "Caffeine for Windows"
-#define MyAppVersion "0.2.0"
+#define MyAppVersion "0.2.4"
 #define MyAppPublisher "Abdul Karim Mia"
 #define MyAppURL "https://github.com/abdul-karim-mia/caffeine-win"
 #define MyAppExecutable "caffeine-win.exe"
@@ -15,11 +15,14 @@ AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
 DefaultDirName={autopf}\{#MyAppName}
 DisableProgramGroupPage=no
+DefaultGroupName={#MyAppName}
+UninstallDisplayIcon={app}\{#MyAppExecutable}
 PrivilegesRequired=lowest
 LicenseFile=LICENSE
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
+SetupIconFile=assets\caffeine-win.ico
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 OutputDir=dist
@@ -36,8 +39,10 @@ Source: "target\release\{#MyAppExecutable}"; DestDir: "{app}"; Flags: ignorevers
 Source: "README.md"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
-Name: "{autostartmenu}\Programs\{#MyAppName}.lnk"; Filename: "{app}\{#MyAppExecutable}"; WorkingDir: "{autopf}"; Tasks: autostart
-Name: "{autodesktop}\{#MyAppName}.lnk"; Filename: "{app}\{#MyAppExecutable}"; WorkingDir: "{autopf}"
+; {group} is the folder chosen on the Select Start Menu Folder page; it is
+; pre-filled from DefaultGroupName.
+Name: "{autostartmenu}\Programs\{group}.lnk"; Filename: "{app}\{#MyAppExecutable}"; WorkingDir: "{autopf}"; IconFilename: "{app}\{#MyAppExecutable}"; Tasks: autostart
+Name: "{autodesktop}\{#MyAppName}.lnk"; Filename: "{app}\{#MyAppExecutable}"; WorkingDir: "{autopf}"; IconFilename: "{app}\{#MyAppExecutable}"
 
 [Run]
 Filename: "{app}\{#MyAppExecutable}"; Description: "Launch {#MyAppName}"; Flags: nowait postinstall skipifsilent; Check: not WizardIsTaskSelected('autostart')

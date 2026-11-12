@@ -23,6 +23,13 @@ use windows_sys::Win32::UI::WindowsAndMessaging::{
 
 const WM_TRAYICON: u32 = WM_USER + 1;
 const TIMER_ID_SECOND: usize = 1001;
+/// NOTIFYICONDATAW is `#[repr(packed)]`, so its fields may not be referenced
+/// directly (E0793: "reference to field of packed struct is unaligned"). These
+/// are the fixed capacities from its windows-sys definition, used instead of
+/// reading the field's length through a reference.
+const TIP_CAP: usize = 128;
+const INFO_CAP: usize = 256;
+const TITLE_CAP: usize = 64;
 /// Frame rate and length of the tray-click sweep animation.
 const TIMER_ID_SWEEP: usize = 1002;
 const SWEEP_FRAME_MS: u32 = 30;
@@ -157,7 +164,7 @@ static mut GLOBAL_WINDOW: Option<*mut TrayWindow> = None;
 fn set_tooltip(nid: &mut NOTIFYICONDATAW, text: &str) {
     for (index, code_unit) in text
         .encode_utf16()
-        .take(nid.szTip.len().saturating_sub(1))
+        .take(TIP_CAP.saturating_sub(1))
         .enumerate()
     {
         nid.szTip[index] = code_unit;
@@ -349,12 +356,24 @@ impl TrayWindow {
                 self.auto_reset_on_activity,
                 caffeine_win::menu::ICON_REFRESH,
             ));
-            rows.push(MenuEntry::icon_item(
-                "Start with Windows",
-                CMD_AUTOSTART,
-                caffeine_win::autostart::is_autostart_enabled(),
-                caffeine_win::menu::ICON_HOME,
-            ));
+            if caffeine_win::autostart::is_packaged() {
+                // Store build: the manifest's StartupTask starts the app at
+                // sign-in (Enabled at install), so there is no Run key to read
+                // or toggle. Report the state instead of pretending to toggle.
+                rows.push(MenuEntry::icon_item(
+                    "Start with Windows (at startup)",
+                    CMD_AUTOSTART,
+                    true,
+                    caffeine_win::menu::ICON_HOME,
+                ));
+            } else {
+                rows.push(MenuEntry::icon_item(
+                    "Start with Windows",
+                    CMD_AUTOSTART,
+                    caffeine_win::autostart::is_autostart_enabled(),
+                    caffeine_win::menu::ICON_HOME,
+                ));
+            }
             rows.push(MenuEntry::icon_item(
                 "Exit",
                 CMD_EXIT,
@@ -375,12 +394,12 @@ impl TrayWindow {
     fn show_balloon(&self, info: &str) {
         unsafe {
             let mut nid = self.make_notify_data(NIF_INFO | NIF_TIP, self.current_icon);
-            for (index, unit) in info.encode_utf16().take(nid.szInfo.len()).enumerate() {
+            for (index, unit) in info.encode_utf16().take(INFO_CAP).enumerate() {
                 nid.szInfo[index] = unit;
             }
             for (index, unit) in "Caffeine"
                 .encode_utf16()
-                .take(nid.szInfoTitle.len())
+                .take(TITLE_CAP)
                 .enumerate()
             {
                 nid.szInfoTitle[index] = unit;
@@ -470,7 +489,11 @@ unsafe extern "system" fn window_proc(
                         CMD_4H => tray.toggle_duration(TimerDuration::Hours(4)),
                         CMD_INFINITE => tray.toggle_duration(TimerDuration::Infinite),
                         CMD_AUTOSTART => {
-                            let _ = caffeine_win::autostart::toggle_autostart();
+                            // Packaged build: StartupTask handles autostart, the
+                            // Run key write would only touch the package hive.
+                            if !caffeine_win::autostart::is_packaged() {
+                                let _ = caffeine_win::autostart::toggle_autostart();
+                            }
                         }
                         CMD_AUTO_RESET => {
                             tray.toggle_auto_reset();

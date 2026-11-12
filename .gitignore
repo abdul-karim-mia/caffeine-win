@@ -1,3 +1,8 @@
 /target
 **/*.rs.bk
 Cargo.lock
+
+# build outputs: regenerated locally (tools\pack-msix.ps1) and by CI
+/dist
+# staging copy written by tools\pack-msix.ps1 before makeappx packs it
+/msix/caffeine-win.exe

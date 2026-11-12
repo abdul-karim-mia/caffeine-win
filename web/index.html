@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Caffeine for Windows 11 — Keep PC & Screen Awake | Ultra-Lightweight System Tray Utility</title>
-  <meta name="description" content="Ultra-lightweight (115 KB), zero-dependency Windows 11 system tray keep-awake utility inspired by Android Caffeine. Features a live animated circular clock countdown icon.">
+  <meta name="description" content="Ultra-lightweight (290 KB), zero-dependency Windows 11 system tray keep-awake utility inspired by Android Caffeine. Features a live animated circular clock countdown icon.">
   <meta name="keywords" content="caffeine windows, windows 11 keep awake, keep pc awake windows, caffeine app windows 11, powertoys awake alternative, setthreadexecutionstate, system tray keep awake, screen timeout preventer">
   <meta name="author" content="Abdul Karim Mia">
   <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
@@ -17,14 +17,14 @@
   <!-- Favicon & App Icons -->
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="manifest" href="/site.webmanifest">
-  <link rel="apple-touch-icon" href="/favicon.svg">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
   <!-- Open Graph / Facebook / LinkedIn / Discord -->
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://caffeine-win.vercel.app/">
   <meta property="og:site_name" content="Caffeine for Windows 11">
   <meta property="og:title" content="Caffeine for Windows 11 — Keep PC & Screen Awake">
-  <meta property="og:description" content="Ultra-lightweight (115 KB), zero-dependency Windows 11 system tray keep-awake utility with animated circular clock icon.">
+  <meta property="og:description" content="Ultra-lightweight (290 KB), zero-dependency Windows 11 system tray keep-awake utility with animated circular clock icon.">
   <meta property="og:image" content="https://caffeine-win.vercel.app/og-image.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
@@ -35,7 +35,7 @@
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:url" content="https://caffeine-win.vercel.app/">
   <meta name="twitter:title" content="Caffeine for Windows 11 — Keep PC & Screen Awake">
-  <meta name="twitter:description" content="Ultra-lightweight (115 KB) Windows 11 system tray keep-awake utility with animated circular clock icon.">
+  <meta name="twitter:description" content="Ultra-lightweight (290 KB) Windows 11 system tray keep-awake utility with animated circular clock icon.">
   <meta name="twitter:image" content="https://caffeine-win.vercel.app/og-image.png">
   <meta name="twitter:image:alt" content="Caffeine for Windows 11 Preview">
 
@@ -49,7 +49,7 @@
         "name": "Caffeine for Windows 11",
         "operatingSystem": "Windows 10, Windows 11",
         "applicationCategory": "UtilitiesApplication",
-        "fileSize": "115KB",
+        "fileSize": "290KB",
         "softwareVersion": "0.2.0",
         "description": "Ultra-lightweight, zero-dependency Windows 11 system tray keep-awake utility with animated circular clock icon.",
         "offers": {
@@ -72,7 +72,7 @@
           "Native Windows dark mode detection and dark-themed UI",
           "Auto-reset timer on mouse and keyboard activity",
           "Portable .exe or Windows installer (setup.exe)",
-          "Zero runtime dependencies (115 KB standalone native binary)",
+          "Zero runtime dependencies (290 KB standalone native binary)",
           "x64 and ARM64 native builds (Copilot+ PC compatible)"
         ]
       },
@@ -92,7 +92,7 @@
             "name": "Does Caffeine for Windows require installation or admin privileges?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "No. It is a single portable 115 KB executable that runs instantly without installation or admin rights. The optional 'Start with Windows' setting is stored safely in HKCU registry."
+              "text": "No. It is a single portable 290 KB executable that runs instantly without installation or admin rights. The optional 'Start with Windows' setting is stored safely in HKCU registry."
             }
           },
           {
@@ -108,7 +108,7 @@
             "name": "How does this compare to Microsoft PowerToys Awake or old Caffeine?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "PowerToys Awake requires the full .NET 8 runtime and is part of a ~180MB package. Old Caffeine apps simulate F15 keypresses which can disrupt applications or trigger anti-cheat software. Caffeine for Windows is 115 KB, has zero dependencies, uses the official Windows power API, and provides a live animated pie-clock in your tray."
+              "text": "PowerToys Awake requires the full .NET 8 runtime and is part of a ~180MB package. Old Caffeine apps simulate F15 keypresses which can disrupt applications or trigger anti-cheat software. Caffeine for Windows is 290 KB, has zero dependencies, uses the official Windows power API, and provides a live animated pie-clock in your tray."
             }
           }
         ]
@@ -1361,6 +1361,7 @@
         <a href="#features" class="nav-link">Features</a>
         <a href="#comparison" class="nav-link">Comparison</a>
         <a href="#faq" class="nav-link">FAQ</a>
+        <a href="/privacy.html" class="nav-link">Privacy</a>
         <a href="https://github.com/abdul-karim-mia/caffeine-win" target="_blank" class="nav-link">GitHub ↗</a>
       </nav>
     </div>
@@ -1371,7 +1372,7 @@
       <section class="hero">
         <div class="badges">
           <span class="badge"><span class="badge-dot"></span> Windows 11 Native</span>
-          <span class="badge">⚡ 115 KB Executable</span>
+          <span class="badge">⚡ 290 KB Executable</span>
           <span class="badge">☕ Zero Dependencies</span>
           <span class="badge" id="starBadge" style="display:none">⭐ <span id="starCount">–</span> stars</span>
           <span class="badge" id="dlBadge" style="display:none">⬇️ <span id="dlCount">–</span> downloads</span>
@@ -1446,7 +1447,7 @@
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
               Portable .exe
             </a>
-            <p style="font-size:0.8rem;color:var(--text-muted);margin-top:4px">ARM64 installer coming soon — portable works everywhere.</p>
+            <p style="font-size:0.8rem;color:var(--text-muted);margin-top:4px">ARM64 installer ships with the release.</p>
           </div>
         </div>
         <p class="dl-footnote" style="margin-top:16px;font-size:0.85rem;color:var(--text-muted)">
@@ -1562,7 +1563,7 @@
               <line x1="12" y1="20" x2="12.01" y2="20"></line>
             </svg>
           </div>
-          <h3>Microscopic 115 KB Binary</h3>
+          <h3>Microscopic 290 KB Binary</h3>
           <p>Zero dependencies. Doesn't need .NET Runtime, Visual C++ Redistributable, or Electron. Available as a portable single file or an optional Windows installer.</p>
         </div>
 
@@ -1603,7 +1604,7 @@
           <tbody>
             <tr class="highlight-row">
               <td>Binary Size</td>
-              <td>⚡ 115 KB</td>
+              <td>⚡ 290 KB</td>
               <td>~180 MB</td>
               <td>~50 KB</td>
             </tr>
@@ -1655,7 +1656,7 @@
               <span class="faq-icon">+</span>
             </summary>
             <div class="faq-answer">
-              No. Caffeine is an ultra-lightweight (~115 KB) standalone portable executable written in pure native Rust with raw Win32 APIs. You can download and run it directly with no installation, no admin privileges, and no .NET or C++ runtime dependencies.
+              No. Caffeine is an ultra-lightweight (~290 KB) standalone portable executable written in pure native Rust with raw Win32 APIs. You can download and run it directly with no installation, no admin privileges, and no .NET or C++ runtime dependencies.
             </div>
           </details>
 
@@ -1675,7 +1676,7 @@
               <span class="faq-icon">+</span>
             </summary>
             <div class="faq-answer">
-              PowerToys Awake requires the full .NET 8 runtime and is part of a large ~180MB suite with multiple nested menus. Classic Caffeine (1.98) simulates synthetic F15 keystrokes that can interfere with apps or get flagged by enterprise security software. Caffeine for Windows is under 115 KB, has zero dependencies, uses the official Windows power API, and renders an animated circular clock in your taskbar.
+              PowerToys Awake requires the full .NET 8 runtime and is part of a large ~180MB suite with multiple nested menus. Classic Caffeine (1.98) simulates synthetic F15 keystrokes that can interfere with apps or get flagged by enterprise security software. Caffeine for Windows is under 290 KB, has zero dependencies, uses the official Windows power API, and renders an animated circular clock in your taskbar.
             </div>
           </details>
 
@@ -2032,7 +2033,7 @@
         if (links[portableKey]) {
           dlBtn.href = ASSETS[portableKey];
           dlBtnLabel.textContent = arch === 'arm64' ? 'Download ARM64 .exe' : 'Download .exe';
-          dlBtnArch.textContent = arch === 'arm64' ? ' (ARM64, ~120 KB)' : ' (x64, ~115 KB)';
+          dlBtnArch.textContent = arch === 'arm64' ? ' (ARM64, ~290 KB)' : ' (x64, ~290 KB)';
         }
         if (links.x64Portable) links.x64Portable.href = ASSETS.x64Portable;
         if (links.x64Setup) links.x64Setup.href = ASSETS.x64Setup;

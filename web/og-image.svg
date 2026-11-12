@@ -30,13 +30,13 @@
 
   <!-- Title & Subtitle -->
   <text x="600" y="320" font-family="'Segoe UI', -apple-system, sans-serif" font-size="56" font-weight="800" fill="#ffffff" text-anchor="middle" letter-spacing="-1">Caffeine for Windows 11</text>
-  <text x="600" y="380" font-family="'Segoe UI', -apple-system, sans-serif" font-size="28" fill="#94a3b8" text-anchor="middle">Ultra-lightweight (115 KB) System Tray Keep-Awake Utility</text>
+  <text x="600" y="380" font-family="'Segoe UI', -apple-system, sans-serif" font-size="28" fill="#94a3b8" text-anchor="middle">Ultra-lightweight (290 KB) System Tray Keep-Awake Utility</text>
 
   <!-- Feature Pills -->
   <g transform="translate(600, 470)">
     <g transform="translate(-320, 0)">
       <rect x="-100" y="-22" width="200" height="44" rx="22" fill="#1e293b" stroke="#334155" />
-      <text x="0" y="6" font-family="'Segoe UI', sans-serif" font-size="16" font-weight="600" fill="#38bdf8" text-anchor="middle">⚡ 115 KB Native Exe</text>
+      <text x="0" y="6" font-family="'Segoe UI', sans-serif" font-size="16" font-weight="600" fill="#38bdf8" text-anchor="middle">⚡ 290 KB Native Exe</text>
     </g>
     <g transform="translate(0, 0)">
       <rect x="-115" y="-22" width="230" height="44" rx="22" fill="#1e293b" stroke="#334155" />

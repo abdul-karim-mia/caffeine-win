@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy — Caffeine for Windows</title>
+  <meta name="description" content="Caffeine for Windows collects nothing: no telemetry, no network connections, no personal data.">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://caffeine-win.vercel.app/privacy.html">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="manifest" href="/site.webmanifest">
+  <style>
+    :root {
+      --bg: #070a13;
+      --card-bg: rgba(18, 24, 40, 0.65);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --accent: #38bdf8;
+      --radius: 16px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', -apple-system, Roboto, sans-serif;
+      line-height: 1.7;
+      padding: 48px 20px 64px;
+    }
+    main {
+      max-width: 760px;
+      margin: 0 auto;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 40px;
+    }
+    h1 { font-size: 1.8rem; font-weight: 700; margin-bottom: 8px; }
+    .updated { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 28px; }
+    h2 { font-size: 1.15rem; font-weight: 600; margin: 28px 0 8px; color: var(--accent); }
+    p, li { color: var(--text-muted); font-size: 0.98rem; margin-bottom: 10px; }
+    ul { padding-left: 22px; }
+    strong { color: var(--text); }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    footer { max-width: 760px; margin: 24px auto 0; text-align: center; color: var(--text-muted); font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Privacy Policy</h1>
+    <p class="updated">Caffeine for Windows (Caffeine Win) &middot; Last updated 13 November 2026</p>
+
+    <p><strong>Summary: Caffeine for Windows collects nothing. It has no analytics, no telemetry, no crash reporting, and no network code of any kind.</strong></p>
+
+    <h2>What data the app collects</h2>
+    <p>None. The desktop application does not collect, store, or transmit any personal data. It never connects to the internet: there is no networking code in the binary.</p>
+
+    <h2>What the app stores on your PC</h2>
+    <ul>
+      <li><strong>Timer state</strong> lives only in memory while the app runs. Closing the app discards it.</li>
+      <li><strong>Microsoft Store builds</strong> store your autostart choice in the Windows StartupTask setting, which you control in <em>Settings &rarr; Apps &rarr; Startup</em>.</li>
+      <li><strong>Installer builds (outside the Store)</strong> store the optional "Start with Windows" choice as one per-user registry value (<code>HKCU\Software\Microsoft\Windows\CurrentVersion\Run</code>) that you can remove at any time, and in the app's own menu.</li>
+    </ul>
+
+    <h2>App permissions</h2>
+    <p>The Microsoft Store build requests <code>runFullTrust</code>, the standard permission every packaged desktop app needs to run and to draw its system tray icon. It accesses no files beyond itself, and no network.</p>
+
+    <h2>This website</h2>
+    <p>The landing page at <a href="https://caffeine-win.vercel.app/">caffeine-win.vercel.app</a> is static and hosted by Vercel. It makes no database queries and runs no analytics scripts on users. Vercel processes standard server access logs under its own <a href="https://vercel.com/legal/privacy-policy" target="_blank" rel="noopener">privacy policy</a>.</p>
+
+    <h2>Contact</h2>
+    <p>Questions or requests: open an issue at <a href="https://github.com/abdul-karim-mia/caffeine-win/issues" target="_blank" rel="noopener">github.com/abdul-karim-mia/caffeine-win</a>. Source code is public under the MIT License.</p>
+  </main>
+  <footer>
+    <p>Caffeine for Windows &mdash; keep your PC and screen awake.</p>
+  </footer>
+</body>
+</html>

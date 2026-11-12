@@ -2,7 +2,7 @@
 
 ## Summary
 
-**Caffeine for Windows 11** is a lightweight (115 KB), zero-dependency, native Win32 system-tray utility that prevents Windows 11 PCs and displays from sleeping during user-selected countdown timers.
+**Caffeine for Windows 11** is a lightweight (290 KB), zero-dependency, native Win32 system-tray utility that prevents Windows 11 PCs and displays from sleeping during user-selected countdown timers.
 
 ## Repository
 
@@ -24,7 +24,7 @@
 git clone https://github.com/abdul-karim-mia/caffeine-win.git
 cd caffeine-win
 
-# Build optimized release binary (~115 KB .exe)
+# Build optimized release binary (~290 KB .exe)
 cargo build --release --locked
 
 # Run unit tests

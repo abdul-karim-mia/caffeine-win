@@ -8,6 +8,8 @@
   <img src="https://img.shields.io/badge/license-MIT-purple?style=flat-square" alt="License" />
 </p>
 
+<p align="center"><img src="assets/caffeine-win-256.png" width="96" height="96" alt="Caffeine for Windows icon: a coffee cup inside a glowing countdown ring"></p>
+
 An ultra-lightweight, zero-dependency Windows 11 system tray keep-awake utility inspired by Android's Caffeine quick tile.
 
 It prevents your PC and screen from sleeping using official Windows power management APIs. It lives quietly in your system tray with a live circular clock icon that animates and drains like a countdown timer.
@@ -17,7 +19,7 @@ It prevents your PC and screen from sleeping using official Windows power manage
 ## ✨ Highlights
 
 - **Zero Dependencies:** Pure native Rust with raw Win32 APIs. No .NET runtime, no Electron, no WebView2, no external DLLs.
-- **Microscopic Footprint:** Single portable executable under **115 KB**, consuming ~2 MB RAM.
+- **Microscopic Footprint:** Single portable executable under **290 KB**, consuming ~2 MB RAM.
 - **Dynamic Circular Clock Icon:** Draws a live pie-chart progress bar in the system tray in real time using native GDI.
 - **Smart Color States:**
   - 🔵 **Cyan / Sky Blue:** Active (> 20% remaining)
@@ -41,7 +43,7 @@ It prevents your PC and screen from sleeping using official Windows power manage
 
 | Feature | **Caffeine for Windows** | PowerToys Awake | Classic Caffeine | Mouse Jigglers |
 |---|---|---|---|---|
-| **Binary Size** | **~115 KB** | ~150–200 MB (bundled) | ~50 KB | Varies |
+| **Binary Size** | **~290 KB** | ~150–200 MB (bundled) | ~50 KB | Varies |
 | **Runtime Dependency** | **None (Native)** | .NET 8 / WPF | None (C++) | Often Java / Python |
 | **Tray Icon Animation** | **Live Circular Clock** | Static icons | Static pot | None |
 | **Keep-Awake Mechanism** | **`SetThreadExecutionState`** | `SetThreadExecutionState` | Simulated F15 key | Simulated mouse input |

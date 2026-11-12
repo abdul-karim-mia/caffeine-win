@@ -12,6 +12,22 @@ fn to_wide(s: &str) -> Vec<u16> {
     s.encode_utf16().chain(std::iter::once(0)).collect()
 }
 
+/// True when this exe runs inside an MSIX/Store package. Package identity means
+/// registry writes land in the package's private hive, so the Run-key autostart
+/// below cannot work there: the manifest's StartupTask (Enabled at install)
+/// provides autostart instead, and the UI reports that instead of the key.
+pub fn is_packaged() -> bool {
+    let mut len: u32 = 0;
+    unsafe {
+        let code = windows_sys::Win32::Storage::Packaging::Appx::GetCurrentPackageFullName(
+            &mut len,
+            std::ptr::null_mut(),
+        );
+        // APPMODEL_ERROR_NO_PACKAGE (15700): not running in a package.
+        code != 15700
+    }
+}
+
 /// Returns true only when the per-user Run value exists and can be queried.
 pub fn is_autostart_enabled() -> bool {
     let key_wide = to_wide(RUN_KEY);

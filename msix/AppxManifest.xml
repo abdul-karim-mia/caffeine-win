@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Caffeine Win - MSIX package manifest for the Microsoft Store submission.
+
+  tools/pack-msix.ps1 fills ProcessorArchitecture (x64) and Version from
+  Cargo.toml before packing. Identity values come from the Partner Center
+  reservation (see docs/microsoft-store.md); they must match the published
+  submission exactly.
+
+  Deliberately absent: no file-type associations, no protocol, no background
+  tasks. runFullTrust is the only capability - it is required to run as a
+  desktop app and to draw the tray icon.
+-->
+<Package
+  xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+  xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  xmlns:uap3="http://schemas.microsoft.com/appx/manifest/uap/windows10/3"
+  xmlns:uap5="http://schemas.microsoft.com/appx/manifest/uap/windows10/5"
+  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+  IgnorableNamespaces="uap uap3 uap5 rescap">
+
+  <Identity
+    Name="Sonarchalunfalnapurnewmas.CaffeineWin"
+    Publisher="CN=70B0DB70-8EB7-417C-BD78-E45B21717ADC"
+    Version="0.2.4.0"
+    ProcessorArchitecture="__ARCH__" />
+
+  <Properties>
+    <DisplayName>Caffeine Win</DisplayName>
+    <PublisherDisplayName>Abdul Karim Mia</PublisherDisplayName>
+    <Logo>Assets\StoreLogo.png</Logo>
+  </Properties>
+
+  <Dependencies>
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.17763.0" MaxVersionTested="10.0.26100.0" />
+  </Dependencies>
+
+  <Resources>
+    <Resource Language="en-us" />
+  </Resources>
+
+  <Capabilities>
+    <rescap:Capability Name="runFullTrust" />
+  </Capabilities>
+
+  <Applications>
+    <Application Id="CaffeineWin" Executable="caffeine-win.exe" EntryPoint="Windows.FullTrustApplication">
+      <uap:VisualElements
+        DisplayName="Caffeine"
+        Description="Keep your PC and screen awake from the system tray, with a live countdown clock icon."
+        BackgroundColor="transparent"
+        Square150x150Logo="Assets\Square150x150Logo.png"
+        Square44x44Logo="Assets\Square44x44Logo.png">
+        <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png" Square310x310Logo="Assets\Square310x310Logo.png" />
+      </uap:VisualElements>
+
+      <Extensions>
+        <!-- Autostart. Inside MSIX the HKCU Run key is virtualised per package,
+             so the registry toggle in src/autostart.rs cannot work here. A
+             StartupTask enabled at install takes over; src/main.rs reports that
+             state in the tray menu and skips the toggle. -->
+        <uap5:Extension Category="windows.startupTask">
+          <uap5:StartupTask TaskId="CaffeineAutostart" Enabled="true" DisplayName="Caffeine Win" />
+        </uap5:Extension>
+      </Extensions>
+    </Application>
+  </Applications>
+</Package>

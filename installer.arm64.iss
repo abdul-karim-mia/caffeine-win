@@ -2,7 +2,7 @@
 ; Caffeine for Windows installer (ARM64)
 
 #define MyAppName "Caffeine for Windows"
-#define MyAppVersion "0.2.0"
+#define MyAppVersion "0.2.4"
 #define MyAppPublisher "Abdul Karim Mia"
 #define MyAppURL "https://github.com/abdul-karim-mia/caffeine-win"
 #define MyAppExecutable "caffeine-win.exe"
@@ -15,13 +15,16 @@ AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
 DefaultDirName={autopf}\{#MyAppName}
 DisableProgramGroupPage=no
+DefaultGroupName={#MyAppName}
+UninstallDisplayIcon={app}\{#MyAppExecutable}
 PrivilegesRequired=lowest
 LicenseFile=LICENSE
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
-ArchitecturesAllowed=arm64compatible
-ArchitecturesInstallIn64BitMode=arm64compatible
+SetupIconFile=assets\caffeine-win.ico
+ArchitecturesAllowed=arm64
+ArchitecturesInstallIn64BitMode=arm64
 OutputDir=dist
 OutputBaseFilename=caffeine-win-setup-arm64
 
@@ -36,8 +39,10 @@ Source: "target\aarch64-pc-windows-msvc\release\{#MyAppExecutable}"; DestDir: "{
 Source: "README.md"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
-Name: "{autostartmenu}\Programs\{#MyAppName}.lnk"; Filename: "{app}\{#MyAppExecutable}"; WorkingDir: "{autopf}"; Tasks: autostart
-Name: "{autodesktop}\{#MyAppName}.lnk"; Filename: "{app}\{#MyAppExecutable}"; WorkingDir: "{autopf}"
+; {group} is the folder chosen on the Select Start Menu Folder page; it is
+; pre-filled from DefaultGroupName.
+Name: "{autostartmenu}\Programs\{group}.lnk"; Filename: "{app}\{#MyAppExecutable}"; WorkingDir: "{autopf}"; IconFilename: "{app}\{#MyAppExecutable}"; Tasks: autostart
+Name: "{autodesktop}\{#MyAppName}.lnk"; Filename: "{app}\{#MyAppExecutable}"; WorkingDir: "{autopf}"; IconFilename: "{app}\{#MyAppExecutable}"
 
 [Run]
 Filename: "{app}\{#MyAppExecutable}"; Description: "Launch {#MyAppName}"; Flags: nowait postinstall skipifsilent; Check: not WizardIsTaskSelected('autostart')
