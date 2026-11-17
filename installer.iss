@@ -2,7 +2,7 @@
 ; Caffeine for Windows installer
 
 #define MyAppName "Caffeine for Windows"
-#define MyAppVersion "0.2.4"
+#define MyAppVersion "0.2.5"
 #define MyAppPublisher "Abdul Karim Mia"
 #define MyAppURL "https://github.com/abdul-karim-mia/caffeine-win"
 #define MyAppExecutable "caffeine-win.exe"

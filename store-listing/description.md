@@ -25,8 +25,9 @@ typing, your games, or anti-cheat software.
 What it does
 
 - Keeps the PC and display awake using the official Windows power API
-- One left-click cycles the timer: 15 min, 30 min, 45 min, 1 h, 2 h, 4 h, or indefinitely
-- Right-click picks any duration directly, toggles "Auto reset on activity", or exits
+- One left-click cycles the timer: 5 min, 15 min, 30 min, 45 min, 1 h, 2 h, 4 h, or indefinitely
+- Right-click picks any duration directly, toggles "Auto reset on activity" or "Reactivate timer after wake", or exits
+- "Reactivate timer after wake" re-arms the last timer when your input wakes the PC after a countdown expires - and never blocks normal sleep
 - A live animated circular clock icon drains in the tray as the timer counts down
 - Colour tells you the state at a glance: blue active, amber under 20%, red in the last 5%, cyan ring for indefinite, dim ring for off
 - Starts with Windows, so it is there when you log in (the Store build uses the Windows StartupTask; no registry edits)

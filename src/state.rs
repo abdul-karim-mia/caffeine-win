@@ -7,8 +7,9 @@ pub enum TimerDuration {
 }
 
 impl TimerDuration {
-    pub const STEPS: [TimerDuration; 7] = [
+    pub const STEPS: [TimerDuration; 8] = [
         TimerDuration::Off,
+        TimerDuration::Minutes(5),
         TimerDuration::Minutes(15),
         TimerDuration::Minutes(30),
         TimerDuration::Hours(1),
@@ -39,6 +40,7 @@ impl TimerDuration {
     pub fn label(&self) -> &'static str {
         match *self {
             TimerDuration::Off => "Off",
+            TimerDuration::Minutes(5) => "5 min",
             TimerDuration::Minutes(15) => "15 min",
             TimerDuration::Minutes(30) => "30 min",
             TimerDuration::Hours(1) => "1 hour",
@@ -54,6 +56,11 @@ pub struct AppState {
     pub current_mode: TimerDuration,
     pub remaining_seconds: u64,
     pub initial_duration_seconds: u64,
+    /// Last timed duration the user picked, kept for wake reactivation.
+    pub last_timed: Option<TimerDuration>,
+    /// True while Off because a countdown ran out, not because the user
+    /// turned the timer off.
+    pub expired: bool,
 }
 
 impl AppState {
@@ -62,6 +69,8 @@ impl AppState {
             current_mode: TimerDuration::Off,
             remaining_seconds: 0,
             initial_duration_seconds: 0,
+            last_timed: None,
+            expired: false,
         }
     }
 
@@ -85,6 +94,23 @@ impl AppState {
                 self.initial_duration_seconds = 0;
             }
         }
+    }
+
+    /// Records a mode the user picked from the menu or a click cycle: timed
+    /// choices become the wake-restore candidate, and a user-driven change
+    /// clears the expiry marker.
+    pub fn remember_mode(&mut self) {
+        self.expired = false;
+        let mode = self.current_mode;
+        if mode.total_seconds().is_some() {
+            self.last_timed = Some(mode);
+        }
+    }
+
+    /// Mode to reactivate when the display wakes after a countdown expired,
+    /// or None when the timer was turned off by the user.
+    pub fn wake_restore_mode(&self) -> Option<TimerDuration> {
+        if self.expired { self.last_timed } else { None }
     }
 
     pub fn toggle_active(&mut self) -> TimerDuration {
@@ -130,12 +156,14 @@ impl AppState {
             TimerDuration::Off | TimerDuration::Infinite => false,
             _ if self.remaining_seconds == 0 => {
                 self.set_mode(TimerDuration::Off);
+                self.expired = true;
                 true
             }
             _ => {
                 self.remaining_seconds -= 1;
                 if self.remaining_seconds == 0 {
                     self.set_mode(TimerDuration::Off);
+                    self.expired = true;
                     true
                 } else {
                     false

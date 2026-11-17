@@ -50,7 +50,7 @@
         "operatingSystem": "Windows 10, Windows 11",
         "applicationCategory": "UtilitiesApplication",
         "fileSize": "290KB",
-        "softwareVersion": "0.2.0",
+        "softwareVersion": "0.2.5",
         "description": "Ultra-lightweight, zero-dependency Windows 11 system tray keep-awake utility with animated circular clock icon.",
         "offers": {
           "@type": "Offer",
@@ -66,11 +66,12 @@
         "featureList": [
           "Prevents Windows 11 PC and display sleep",
           "Animated circular clock tray icon with live pie chart countdown",
-          "One-click timer cycling: 15m, 30m, 45m, 1h, 2h, 4h, Indefinite",
+          "One-click timer cycling: 5m, 15m, 30m, 45m, 1h, 2h, 4h, Indefinite",
           "Official SetThreadExecutionState Win32 power management API",
           "Start with Windows auto-startup option",
           "Native Windows dark mode detection and dark-themed UI",
           "Auto-reset timer on mouse and keyboard activity",
+          "Reactivate the last timer when the user wakes the PC",
           "Portable .exe or Windows installer (setup.exe)",
           "Zero runtime dependencies (290 KB standalone native binary)",
           "x64 and ARM64 native builds (Copilot+ PC compatible)"
@@ -100,7 +101,7 @@
             "name": "How do I cycle between timer durations?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "Simply left-click the system tray icon to cycle through presets: Off -> 15 min -> 30 min -> 1 hour -> 2 hours -> 4 hours -> Indefinite -> Off. You can also right-click to choose any preset directly."
+              "text": "Simply left-click the system tray icon to cycle through presets: Off -> 5 min -> 15 min -> 30 min -> 1 hour -> 2 hours -> 4 hours -> Indefinite -> Off. You can also right-click to choose any preset directly."
             }
           },
           {
@@ -1381,7 +1382,7 @@
 
         <h1>Keep your PC & screen awake.<br>Clean. Minimal. Smart.</h1>
         <p class="subtitle">
-          Inspired by Android's Caffeine tile. Lives in your Windows 11 system tray with a live circular clock icon. One click cycles timers from 15 minutes to indefinite.
+          Inspired by Android's Caffeine tile. Lives in your Windows 11 system tray with a live circular clock icon. One click cycles timers from 5 minutes to indefinite.
         </p>
 
         <div class="cta-group">
@@ -1666,7 +1667,7 @@
               <span class="faq-icon">+</span>
             </summary>
             <div class="faq-answer">
-              Simply left-click the system tray icon to step through the sequence: <strong>Off ➔ 15 min ➔ 30 min ➔ 1 hour ➔ 2 hours ➔ 4 hours ➔ Indefinite ➔ Off</strong>. You can also right-click the tray icon at any time to select any preset directly or toggle "Start with Windows".
+              Simply left-click the system tray icon to step through the sequence: <strong>Off ➔ 5 min ➔ 15 min ➔ 30 min ➔ 1 hour ➔ 2 hours ➔ 4 hours ➔ Indefinite ➔ Off</strong>. You can also right-click the tray icon at any time to select any preset directly, toggle "Auto reset on activity" or "Reactivate timer after wake", or turn on "Start with Windows".
             </div>
           </details>
 
@@ -1705,6 +1706,7 @@
     // State definitions
     const STEPS = [
       { mode: 'Off', total: 0, label: 'Off' },
+      { mode: '5m', total: 5 * 60, label: '5 Minutes' },
       { mode: '15m', total: 15 * 60, label: '15 Minutes' },
       { mode: '30m', total: 30 * 60, label: '30 Minutes' },
       { mode: '1h', total: 60 * 60, label: '1 Hour' },

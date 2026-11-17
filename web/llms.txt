@@ -53,11 +53,11 @@ strip = true
 |------|---------|
 | `src/main.rs` | Win32 message loop, tray icon registration, left/right-click handlers, shutdown cleanup. |
 | `src/icon.rs` | GDI+-based animated pie-clock renderer — blue → amber → red countdown slices. |
-| `src/state.rs` | Timer lifecycle: step cycles (`Off → 15m → 30m → 1h → 2h → 4h → Indefinite → Off`), progress ratio, tooltip text, formatting helpers. |
+| `src/state.rs` | Timer lifecycle: step cycles (`Off → 5m → 15m → 30m → 1h → 2h → 4h → Indefinite → Off`), progress ratio, tooltip text, formatting helpers. |
 | `src/keepawake.rs` | P/Invoke wrapper around `SetThreadExecutionState` (`ES_CONTINUOUS \| ES_SYSTEM_REQUIRED \| ES_DISPLAY_REQUIRED`). |
 | `src/single_instance.rs` | Named-mutex gate ensuring single running instance. |
 | `src/autostart.rs` | Registry `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` toggle for login persistence. |
-| `src/tests.rs` | 4 unit tests: cycle sequence, ticking decrement, indefinite mode edge-case, progress ratio range. |
+| `src/tests.rs` | 18 unit tests: cycle sequence, ticking decrement, expiry/wake-restore semantics, indefinite mode edge-case, progress ratio range. |
 | `src/lib.rs` | Module declarations / re-exports. |
 
 ## Usage
@@ -75,12 +75,13 @@ strip = true
 | Order | Mode | Duration | Visual |
 |-------|------|----------|--------|
 | 0 | Off | — | Static icon |
-| 1 | 15m | 900s | Blue pie shrink |
-| 2 | 30m | 1800s | Blue pie shrink |
-| 3 | 1h | 3600s | Blue→amber transition |
-| 4 | 2h | 7200s | Amber pie shrink |
-| 5 | 4h | 14400s | Amber→red transition |
-| 6 | Indefinite | ∞ | Full blue glow |
+| 1 | 5m | 300s | Blue pie shrink |
+| 2 | 15m | 900s | Blue pie shrink |
+| 3 | 30m | 1800s | Blue pie shrink |
+| 4 | 1h | 3600s | Blue→amber transition |
+| 5 | 2h | 7200s | Amber pie shrink |
+| 6 | 4h | 14400s | Amber→red transition |
+| 7 | Indefinite | ∞ | Full blue glow |
 
 ## Web Presence (/web)
 

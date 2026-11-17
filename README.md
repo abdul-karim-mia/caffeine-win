@@ -29,11 +29,12 @@ It prevents your PC and screen from sleeping using official Windows power manage
   - ⚪ **Dim Gray Ring:** Inactive / Off
 - **One-Click Cycling:** Left-click the tray icon to cycle through these modes:
 
-  `Off` → `15 min` → `30 min` → `1 hr` → `2 hr` → `4 hr` → `Indefinite` → `Off`
+  `Off` → `5 min` → `15 min` → `30 min` → `1 hr` → `2 hr` → `4 hr` → `Indefinite` → `Off`
 
 - **Context Menu:** Right-click to directly jump to any preset, toggle **"Start with Windows"**, or exit.
 - **Dark Mode Aware:** Automatically detects system-wide Windows dark mode and applies a native dark theme to the context menu and GDI tray icon rendering.
 - **Auto Reset on Activity:** Toggle **"Auto Reset on Activity"** from the tray menu to restart the active countdown whenever mouse or keyboard input is detected.
+- **Reactivate Timer After Wake:** Toggle **"Reactivate timer after wake"** from the tray menu to bring back the last used timer the moment the screen turns on, after a keep-awake countdown expired and the display went to sleep.
 - **Safe & Native:** Uses `SetThreadExecutionState` instead of simulating fake keystrokes (unlike old Caffeine tools that send F15 or jitter mice).
 - **Single Instance:** Enforced via Win32 Named Mutex to prevent duplicate icons.
 
@@ -87,6 +88,10 @@ The application reads the system theme via the registry key `HKCU\Software\Micro
 ### 5. Auto Reset on Activity
 
 When **"Auto Reset on Activity"** is enabled from the tray context menu, the application monitors system-wide input idle time using `GetLastInputInfo`. On any detected change in user activity (mouse or keyboard), the active timer's countdown is reset to its full duration from the moment of activity.
+
+### 6. Reactivate Timer After Wake
+
+When **"Reactivate timer after wake"** is enabled, the app remembers the last used timed duration and watches for the first mouse or keyboard input after a keep-awake countdown expired on its own (rather than being turned off manually). That input is what wakes the screen, so the timer is reactivated the moment the user returns — no need to re-pick it from the menu. While no input arrives, nothing is re-armed, so the PC still sleeps normally after the timeout.
 
 ---
 

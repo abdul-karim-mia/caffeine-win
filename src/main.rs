@@ -35,6 +35,9 @@ const TIMER_ID_SWEEP: usize = 1002;
 const SWEEP_FRAME_MS: u32 = 30;
 /// 16 frames at 30ms: one half-second turn of the acknowledgement arc.
 const SWEEP_FRAMES: u32 = 16;
+/// Polls for user input while a countdown has expired, so the wake-reactivate
+/// option can re-arm the last duration the moment the user returns.
+const TIMER_ID_WAKE_POLL: usize = 1003;
 
 #[repr(C)]
 struct LastInputInfo {
@@ -66,6 +69,7 @@ fn get_last_input_tick() -> Option<u32> {
 }
 
 const CMD_EXIT: usize = 2001;
+const CMD_5M: usize = 2013;
 const CMD_15M: usize = 2003;
 const CMD_30M: usize = 2004;
 const CMD_45M: usize = 2005;
@@ -75,6 +79,7 @@ const CMD_4H: usize = 2008;
 const CMD_INFINITE: usize = 2009;
 const CMD_AUTO_RESET: usize = 2010;
 const CMD_AUTOSTART: usize = 2011;
+const CMD_REACTIVATE: usize = 2012;
 /// Row identifier for the Options submenu parent; never dispatched.
 const PERSONALIZE_KEY: &str = "Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize";
 
@@ -109,6 +114,29 @@ fn system_prefers_dark_mode() -> bool {
 
 fn encode_wide(s: &str) -> Vec<u16> {
     s.encode_utf16().chain(std::iter::once(0)).collect()
+}
+
+/// Opt-in tracing for wake-reactivation troubleshooting: set CAFFEINE_DEBUG
+/// to write events to %TEMP%\caffeine-debug.log.
+static DEBUG_LOG: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+
+fn debug_enabled() -> bool {
+    *DEBUG_LOG.get_or_init(|| std::env::var_os("CAFFEINE_DEBUG").is_some())
+}
+
+fn debug_log(message: &str) {
+    if !debug_enabled() {
+        return;
+    }
+    let path = std::env::temp_dir().join("caffeine-debug.log");
+    let stamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    if let Ok(mut file) = std::fs::OpenOptions::new().create(true).append(true).open(&path) {
+        use std::io::Write;
+        let _ = writeln!(file, "{stamp} {message}");
+    }
 }
 
 fn init_system_dark() {
@@ -154,6 +182,12 @@ struct TrayWindow {
     current_icon: HICON,
     taskbar_created_message: u32,
     auto_reset_on_activity: bool,
+    /// Reactivate the last timed duration when the user comes back after the
+    /// countdown expired: their input is what wakes the screen.
+    reactivate_on_wake: bool,
+    /// Input tick recorded when the countdown expired; a changed tick means
+    /// the user gave input again and the PC is being woken.
+    expiry_input_tick: Option<u32>,
     last_input_tick: Option<u32>,
     /// Frame number of the tray-click sweep, while it is running.
     sweep: Option<u32>,
@@ -241,6 +275,8 @@ impl TrayWindow {
 
     fn on_left_click(&mut self) {
         self.app_state.cycle_next();
+        self.app_state.remember_mode();
+        self.stop_wake_poll();
         self.sync_timer_and_power();
         // A click changes the timer, and the ring on its own is easy to miss.
         // Sweep a white arc once around the icon so the click always reads.
@@ -256,6 +292,8 @@ impl TrayWindow {
     fn toggle_duration(&mut self, mode: TimerDuration) {
         let turning_off = self.app_state.current_mode == mode;
         self.app_state.toggle_mode(mode);
+        self.app_state.remember_mode();
+        self.stop_wake_poll();
         if !turning_off && self.auto_reset_on_activity {
             self.last_input_tick = get_last_input_tick();
         }
@@ -274,6 +312,55 @@ impl TrayWindow {
         };
     }
 
+    fn toggle_reactivate(&mut self) {
+        self.reactivate_on_wake = !self.reactivate_on_wake;
+        if !self.reactivate_on_wake {
+            self.stop_wake_poll();
+            self.expiry_input_tick = None;
+        }
+        debug_log(&format!("option reactivate_on_wake -> {}", self.reactivate_on_wake));
+    }
+
+    /// Poll tick while a countdown sits expired: the first user input after
+    /// expiry is what wakes the screen, so re-arm the last timed duration
+    /// then. System-initiated wake-ups carry no input and never re-arm, so
+    /// the PC stays free to sleep.
+    fn check_wake_poll(&mut self) {
+        if self.app_state.wake_restore_mode().is_none() {
+            self.stop_wake_poll();
+            return;
+        }
+        let Some(expiry_tick) = self.expiry_input_tick else {
+            self.stop_wake_poll();
+            return;
+        };
+        let Some(current_tick) = get_last_input_tick() else {
+            return;
+        };
+        if current_tick == expiry_tick {
+            return;
+        }
+        self.stop_wake_poll();
+        self.expiry_input_tick = None;
+        if let Some(mode) = self.app_state.wake_restore_mode() {
+            debug_log("input detected since expiry, reactivating timer");
+            self.app_state.set_mode(mode);
+            self.app_state.expired = false;
+            if self.auto_reset_on_activity {
+                self.last_input_tick = get_last_input_tick();
+            }
+            self.sync_timer_and_power();
+            self.update_tray();
+            self.show_balloon(&format!("You're back. Timer reactivated: {}.", mode.label()));
+        }
+    }
+
+    fn stop_wake_poll(&mut self) {
+        unsafe {
+            KillTimer(self.hwnd, TIMER_ID_WAKE_POLL);
+        }
+    }
+
     fn handle_activity_and_tick(&mut self) {
         if self.auto_reset_on_activity && self.app_state.current_mode.is_active() {
             if let Some(current_input_tick) = get_last_input_tick() {
@@ -287,6 +374,15 @@ impl TrayWindow {
         }
 
         if self.app_state.tick() {
+            // Baseline for the wake-reactivate gate: any input after this
+            // point proves the user returned, so poll for it.
+            self.expiry_input_tick = get_last_input_tick();
+            if self.reactivate_on_wake {
+                unsafe {
+                    SetTimer(self.hwnd, TIMER_ID_WAKE_POLL, 1000, None);
+                }
+            }
+            debug_log(&format!("timer expired, expiry_tick={:?}", self.expiry_input_tick));
             let _ = set_keep_awake(false);
             unsafe {
                 KillTimer(self.hwnd, TIMER_ID_SECOND);
@@ -332,6 +428,7 @@ impl TrayWindow {
             };
             let mut rows = vec![MenuEntry::header(&header, caffeine_win::menu::ICON_CLOCK)];
             let durations = [
+                ("5 min", CMD_5M, TimerDuration::Minutes(5)),
                 ("15 min", CMD_15M, TimerDuration::Minutes(15)),
                 ("30 min", CMD_30M, TimerDuration::Minutes(30)),
                 ("45 min", CMD_45M, TimerDuration::Minutes(45)),
@@ -355,6 +452,12 @@ impl TrayWindow {
                 CMD_AUTO_RESET,
                 self.auto_reset_on_activity,
                 caffeine_win::menu::ICON_REFRESH,
+            ));
+            rows.push(MenuEntry::icon_item(
+                "Reactivate timer after wake",
+                CMD_REACTIVATE,
+                self.reactivate_on_wake,
+                caffeine_win::menu::ICON_POWER,
             ));
             if caffeine_win::autostart::is_packaged() {
                 // Store build: the manifest's StartupTask starts the app at
@@ -397,11 +500,7 @@ impl TrayWindow {
             for (index, unit) in info.encode_utf16().take(INFO_CAP).enumerate() {
                 nid.szInfo[index] = unit;
             }
-            for (index, unit) in "Caffeine"
-                .encode_utf16()
-                .take(TITLE_CAP)
-                .enumerate()
-            {
+            for (index, unit) in "Caffeine".encode_utf16().take(TITLE_CAP).enumerate() {
                 nid.szInfoTitle[index] = unit;
             }
             nid.dwInfoFlags = NIIF_INFO;
@@ -473,6 +572,11 @@ unsafe extern "system" fn window_proc(
                         let tray = &mut *tray_ptr;
                         tray.advance_sweep();
                     }
+                } else if wparam == TIMER_ID_WAKE_POLL {
+                    if let Some(tray_ptr) = GLOBAL_WINDOW {
+                        let tray = &mut *tray_ptr;
+                        tray.check_wake_poll();
+                    }
                 }
                 0
             }
@@ -481,6 +585,7 @@ unsafe extern "system" fn window_proc(
                 if let Some(tray_ptr) = GLOBAL_WINDOW {
                     let tray = &mut *tray_ptr;
                     match command {
+                        CMD_5M => tray.toggle_duration(TimerDuration::Minutes(5)),
                         CMD_15M => tray.toggle_duration(TimerDuration::Minutes(15)),
                         CMD_30M => tray.toggle_duration(TimerDuration::Minutes(30)),
                         CMD_45M => tray.toggle_duration(TimerDuration::Minutes(45)),
@@ -497,6 +602,9 @@ unsafe extern "system" fn window_proc(
                         }
                         CMD_AUTO_RESET => {
                             tray.toggle_auto_reset();
+                        }
+                        CMD_REACTIVATE => {
+                            tray.toggle_reactivate();
                         }
                         CMD_EXIT => {
                             if tray.app_state.current_mode.is_active()
@@ -525,6 +633,7 @@ unsafe extern "system" fn window_proc(
                 // fire against a freed window.
                 KillTimer(hwnd, TIMER_ID_SWEEP);
                 KillTimer(hwnd, TIMER_ID_SECOND);
+                KillTimer(hwnd, TIMER_ID_WAKE_POLL);
                 let _ = set_keep_awake(false);
                 PostQuitMessage(0);
                 0
@@ -541,6 +650,11 @@ fn main() {
         Some(lock) => lock,
         None => return,
     };
+
+    if debug_enabled() {
+        let _ = std::fs::remove_file(std::env::temp_dir().join("caffeine-debug.log"));
+        debug_log("start");
+    }
 
     init_system_dark();
 
@@ -596,6 +710,8 @@ fn main() {
             current_icon: initial_icon,
             taskbar_created_message,
             auto_reset_on_activity: false,
+            reactivate_on_wake: false,
+            expiry_input_tick: None,
             last_input_tick: None,
             sweep: None,
         });

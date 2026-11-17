@@ -22,7 +22,7 @@
   <Identity
     Name="Sonarchalunfalnapurnewmas.CaffeineWin"
     Publisher="CN=70B0DB70-8EB7-417C-BD78-E45B21717ADC"
-    Version="0.2.4.0"
+    Version="0.2.5.0"
     ProcessorArchitecture="__ARCH__" />
 
   <Properties>

@@ -50,6 +50,8 @@ fn test_status_label() {
 fn test_timer_cycle_sequence() {
     let mut state = AppState::new();
     assert_eq!(state.current_mode, TimerDuration::Off);
+    assert_eq!(state.cycle_next(), TimerDuration::Minutes(5));
+    assert_eq!(state.remaining_seconds, 5 * 60);
     assert_eq!(state.cycle_next(), TimerDuration::Minutes(15));
     assert_eq!(state.remaining_seconds, 15 * 60);
     assert_eq!(state.cycle_next(), TimerDuration::Minutes(30));
@@ -142,4 +144,52 @@ fn test_reset_countdown_does_not_change_infinite_or_off() {
     state.reset_countdown();
     assert_eq!(state.current_mode, TimerDuration::Off);
     assert_eq!(state.remaining_seconds, 0);
+}
+
+#[test]
+fn test_expiry_leaves_wake_restore_candidate() {
+    let mut state = AppState::new();
+    state.set_mode(TimerDuration::Minutes(15));
+    state.remember_mode();
+    state.remaining_seconds = 1;
+    assert!(state.tick());
+    assert_eq!(state.current_mode, TimerDuration::Off);
+    assert_eq!(state.wake_restore_mode(), Some(TimerDuration::Minutes(15)));
+}
+
+#[test]
+fn test_user_turned_off_never_restores() {
+    let mut state = AppState::new();
+    state.set_mode(TimerDuration::Minutes(30));
+    state.remember_mode();
+    // Same row again turns it off: a user action, not an expiry.
+    state.toggle_mode(TimerDuration::Minutes(30));
+    state.remember_mode();
+    assert_eq!(state.current_mode, TimerDuration::Off);
+    assert_eq!(state.wake_restore_mode(), None);
+}
+
+#[test]
+fn test_infinite_is_not_a_restore_candidate() {
+    let mut state = AppState::new();
+    state.set_mode(TimerDuration::Minutes(15));
+    state.remember_mode();
+    state.set_mode(TimerDuration::Infinite);
+    state.remember_mode();
+    assert_eq!(state.last_timed, Some(TimerDuration::Minutes(15)));
+    assert_eq!(state.wake_restore_mode(), None);
+}
+
+#[test]
+fn test_new_pick_clears_expiry_marker() {
+    let mut state = AppState::new();
+    state.set_mode(TimerDuration::Minutes(15));
+    state.remember_mode();
+    state.remaining_seconds = 1;
+    assert!(state.tick());
+    assert!(state.expired);
+    state.set_mode(TimerDuration::Hours(2));
+    state.remember_mode();
+    assert_eq!(state.wake_restore_mode(), None);
+    assert_eq!(state.last_timed, Some(TimerDuration::Hours(2)));
 }
