@@ -6,6 +6,17 @@
 #define MyAppPublisher "Abdul Karim Mia"
 #define MyAppURL "https://github.com/abdul-karim-mia/caffeine-win"
 #define MyAppExecutable "caffeine-win.exe"
+; The exe lives under the target triple when built with --target (CI and the
+; ARM64 script do this); plain `cargo build --release` puts it in target\release.
+#if FileExists("target\x86_64-pc-windows-msvc\release\" + MyAppExecutable)
+#define MyAppExeSource "target\x86_64-pc-windows-msvc\release\" + MyAppExecutable
+#else
+#if FileExists("target\release\" + MyAppExecutable)
+#define MyAppExeSource "target\release\" + MyAppExecutable
+#else
+#error "caffeine-win.exe not found: run cargo build --release --target x86_64-pc-windows-msvc first"
+#endif
+#endif
 
 [Setup]
 AppId={{D8F7E9A0-C1B2-4A3F-8C5D-1E2F3A4B5C6D}}
@@ -35,7 +46,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "autostart"; Description: "Start {#MyAppName} with Windows"; Flags: unchecked
 
 [Files]
-Source: "target\release\{#MyAppExecutable}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#MyAppExeSource}"; DestDir: "{app}"; Flags: ignoreversion
 Source: "README.md"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]

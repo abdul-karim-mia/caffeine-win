@@ -175,7 +175,9 @@ jobs:
           $prev = $null
           $end = "HEAD"
           if ($tag -like "v*" -and $tag -ne "latest") {
-            $end = $tag
+            # The release tag is created later by the publish step, so it does
+            # not exist as a ref yet; HEAD is the commit that will be tagged.
+            $end = "HEAD"
             try {
               $prev = ($tags | Where-Object { [version]$_.TrimStart("v") -lt [version]$tag.TrimStart("v") } | Select-Object -First 1)
             } catch {
