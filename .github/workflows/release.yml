@@ -211,7 +211,7 @@ jobs:
           prerelease: ${{ env.IS_PRERELEASE == 'true' }}
           draft: false
           generate_release_notes: true
-          make_latest: true
+          make_latest: ${{ env.RELEASE_TAG != 'latest' }}
           overwrite_files: true
 
       - name: Submit winget manifest
@@ -245,14 +245,15 @@ jobs:
               "architecture": {
                   "64bit": {
                       "url": "$base/caffeine-win-windows-x64.zip",
-                      "hash": "$h64"
+                      "hash": "$h64",
+                      "bin": "caffeine-win.exe"
                   },
                   "arm64": {
                       "url": "$base/caffeine-win-windows-arm64.zip",
-                      "hash": "$hArm"
+                      "hash": "$hArm",
+                      "bin": "caffeine-win-arm64.exe"
                   }
               },
-              "bin": "caffeine-win.exe",
               "checkver": {
                   "github": "https://github.com/abdul-karim-mia/caffeine-win"
               },
@@ -292,5 +293,5 @@ jobs:
           prerelease: ${{ env.IS_PRERELEASE == 'true' }}
           draft: false
           generate_release_notes: true
-          make_latest: true
+          make_latest: ${{ env.RELEASE_TAG != 'latest' }}
           overwrite_files: true
